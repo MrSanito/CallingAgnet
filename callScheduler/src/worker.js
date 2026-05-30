@@ -70,9 +70,10 @@ const worker = new Worker(
       const finalShopName = shopName || (clientOtherDetails && clientOtherDetails.shopName) || "";
 
       if (lead) {
-        // Check max attempts limit (3)
-        if (lead.totalAttempts >= 3) {
-          console.log(`[Worker] ⛔ Lead ${lead._id} has reached max 3 attempts. Skipping call.`);
+        // Check max attempts limit (dynamic per lead, defaults to 3)
+        const maxAttempts = lead.maxAttempts || 3;
+        if (lead.totalAttempts >= maxAttempts) {
+          console.log(`[Worker] ⛔ Lead ${lead._id} has reached max ${maxAttempts} attempts. Skipping call.`);
           lead.status = "failed";
           await lead.save();
           return { skipped: true, reason: "max_attempts_reached" };
@@ -123,16 +124,27 @@ const worker = new Worker(
       console.log(`[Worker] Registered VideoSDK Room in DB: ${serviceRoomId}`);
 
       // 4. Save Call Attempt (CallHistory) to DB
+      const queuedAtTime = job.timestamp ? new Date(job.timestamp) : new Date();
+      
       const callHistory = new CallHistory({
         leadId: lead ? lead._id : new mongoose.Types.ObjectId(),
         roomId: serviceRoomId,
         customRoomId,
         attemptCount: attemptNum || 1,
+        attemptNumber: attemptNum || 1, // New field tracking which retry this is
         status: "active",
         startedAt: new Date(),
+        queuedAt: queuedAtTime,
+        dialedAt: new Date(), // Set just before we dial
+        retryReason: attemptNum > 1 ? "retry" : null, // If it's >1, we'll generically call it a retry initially
       });
       await callHistory.save();
       console.log(`[Worker] Saved Call History attempt record: ${callHistory._id}`);
+
+      // 4.5 Link VideoSDK Room back to CallHistory and mark active
+      sdkRoom.callId = callHistory._id;
+      sdkRoom.status = "active";
+      await sdkRoom.save();
 
       // 5. Trigger the SIP outbound call linking it to the VideoSDK Room
       console.log(`[Worker] Triggering outbound SIP call connecting ${clientNumber} to room ${serviceRoomId}`);

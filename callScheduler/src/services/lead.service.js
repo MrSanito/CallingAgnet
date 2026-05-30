@@ -1,4 +1,4 @@
-import { Lead, CallHistory } from "../models/mongooseModels.js";
+import { Lead, CallHistory, ScheduledCallback } from "../models/mongooseModels.js";
 import { callQueue } from "../queues/callQueue.js";
 import { parseTranscript, cleanupLeadsList } from "./geminiService.js";
 import { updateLead, addFollowUp, fetchTodayLeads } from "./crmService.js";
@@ -16,7 +16,7 @@ function normalizePhoneNumber(phone) {
 /**
  * Saves/updates lead and queues an immediate call
  */
-export async function processLeadAndQueueImmediate({ clientName, clientNumber, clientRequirement, clientOtherDetails, shopName }, isNewLeadsPath = false) {
+export async function processLeadAndQueueImmediate({ clientName, clientNumber, clientRequirement, clientOtherDetails, shopName, maxAttempts, priority, timezone, preferredCallWindow, tags }, isNewLeadsPath = false) {
   const cleanNumber = normalizePhoneNumber(clientNumber);
   const name = clientName || "Customer";
   const requirement = clientRequirement || "General Follow-up";
@@ -33,6 +33,13 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
     lead.clientOtherDetails = { ...lead.clientOtherDetails, ...otherDetails };
     lead.status = "pending";
     lead.totalAttempts = 0;
+    
+    if (maxAttempts !== undefined) lead.maxAttempts = maxAttempts;
+    if (priority !== undefined) lead.priority = priority;
+    if (timezone !== undefined) lead.timezone = timezone;
+    if (preferredCallWindow !== undefined) lead.preferredCallWindow = preferredCallWindow;
+    if (tags !== undefined) lead.tags = tags;
+
     await lead.save();
     console.log(`[Lead Service] Re-activated existing lead: ${cleanNumber}`);
   } else {
@@ -44,6 +51,11 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
       clientOtherDetails: otherDetails,
       status: "pending",
       totalAttempts: 0,
+      maxAttempts: maxAttempts !== undefined ? maxAttempts : 3,
+      priority: priority || 0,
+      timezone: timezone || "Asia/Kolkata",
+      preferredCallWindow: preferredCallWindow || { start: "09:00", end: "19:00" },
+      tags: tags || [],
     });
     await lead.save();
     console.log(`[Lead Service] Created new lead: ${name} (${cleanNumber})`);
@@ -240,15 +252,26 @@ export async function resolveCall({ leadId, clientName, clientNumber, clientRequ
 
   if (shouldFollowUp) {
     const delayMs = resolution.followUpDelayMinutes * 60 * 1000;
-    const followUpAt = new Date(Date.now() + delayMs).toISOString();
+    const followUpAt = new Date(Date.now() + delayMs);
 
     await addFollowUp(effectiveLeadId, {
-      followUpAt,
+      followUpAt: followUpAt.toISOString(),
       notes: resolution.nextAction,
       assignedTo: "auto-scheduler",
     });
 
-    // 4. Re-queue call in BullMQ
+    // 4. Create ScheduledCallback record
+    const scheduledCallback = new ScheduledCallback({
+      leadId: effectiveLeadId.length === 24 ? effectiveLeadId : leadId, // use ObjectId if possible
+      scheduledFor: followUpAt,
+      channel: "call",
+      status: "queued",
+      reason: "follow_up",
+      note: resolution.nextAction
+    });
+    await scheduledCallback.save();
+
+    // 5. Re-queue call in BullMQ
     followUpJob = await callQueue.add(
       "initiate-call",
       {
@@ -257,7 +280,7 @@ export async function resolveCall({ leadId, clientName, clientNumber, clientRequ
         clientRequirement,
         clientOtherDetails: clientOtherDetails || {},
         attemptCount: ((clientOtherDetails && clientOtherDetails.attemptCount) ?? 0) + 1,
-        scheduledAt: followUpAt,
+        scheduledAt: followUpAt.toISOString(),
         previousResolution: resolution.resolution,
       },
       { delay: delayMs }

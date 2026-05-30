@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from videosdk.agents import function_tool
-from videosdk.agents.warm_transfer import WarmTransferConfig, SIPDestination
 
 logger = logging.getLogger(__name__)
 
@@ -88,35 +87,35 @@ class AgentTools:
         asyncio.create_task(self._announce_and_hangup(message=message))
         return {"status": "ending_call"}
 
-    @function_tool
-    async def escalate_to_human(self, reason: str = "Customer requested human supervisor") -> str:
-        """Call ko kisi human supervisor/manager ke paas warm transfer karne ke liye is tool ko call karein.
-            reason: Short description ki call kyun transfer ki ja rahi hai.
-        """
-        logger.info(f"[AgentTools] escalate_to_human triggered. Reason: '{reason}'")
-        config = WarmTransferConfig(
-            destination=SIPDestination(
-                routing_rule_id=os.getenv("SIP_ROUTING_RULE_ID", "rr_xxxxxxxx"),
-                sip_call_to=os.getenv("SIP_CALL_TO", "+1XXXXXXXXXX"),
-                sip_call_from=os.getenv("SIP_CALL_FROM", "+1XXXXXXXXXX"),
-            ),
-        )
-        result = await self.session.warm_transfer(config)
-        if result.success:
-            logger.info("[AgentTools] Warm transfer successfully initiated.")
-            return "Connected to a supervisor."
-        logger.warning("[AgentTools] Warm transfer failed or could not reach supervisor.")
-        return "I couldn't reach a supervisor right now. Let me keep helping you."
 
     @function_tool
-    async def transfer_to_human(self, reason: str = "Customer requested human support", customer_name: str = "", summary: str = "") -> str:
-        """Call ko human transfer agent ke paas connect karne ke liye is tool ko call karein.
-            reason: Kis wajah se call transfer kiya ja raha hai.
-            customer_name: Customer ka naam if known.
-            summary: Abhi tak ki conversation ki summary.
+    async def transfer_to_human(self, reason: str) -> str:
+        """Transfer this call directly to a human agent.
+        
+        Args:
+            reason: Why the transfer is needed.
         """
-        logger.info(f"[AgentTools] transfer_to_human triggered. Reason: '{reason}', Customer: '{customer_name}'")
-        return await self.escalate_to_human(reason)
+        logger.info(f"[AgentTools] transfer_to_human (Cold Transfer) triggered. Reason: '{reason}'")
+        
+        token = os.getenv("VIDEOSDK_AUTH_TOKEN", "")
+        transfer_to = os.getenv("CALL_TRANSFER_TO", "+916351906090") 
+        
+        # Adding some safety logs in case token is missing
+        if not token:
+            logger.warning("[AgentTools] VIDEOSDK_AUTH_TOKEN is missing or empty!")
+            
+        try:
+            result = await self.session.call_transfer(token, transfer_to)
+            # User specifically requested logging the exact response:
+            if hasattr(result, '__dict__'):
+                logger.info(f"[AgentTools] call_transfer execution result: {vars(result)}")
+            else:
+                logger.info(f"[AgentTools] call_transfer execution result: {result}")
+                
+            return "Transferring you now. I will disconnect from my end."
+        except Exception as e:
+            logger.error(f"[AgentTools] call_transfer threw an exception: {e}", exc_info=True)
+            return "I'm sorry, transfer failed. I'll arrange a callback for you."
 
     async def _announce_and_hangup(self, message: str = "") -> None:
         if not self.session:

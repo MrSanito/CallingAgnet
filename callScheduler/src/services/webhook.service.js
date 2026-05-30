@@ -93,6 +93,7 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
     callHistory.status = "no_answer";
     callHistory.endedAt = new Date();
     callHistory.resolution = "no_answer";
+    callHistory.hangupCause = "no_answer";
     if (agentLanguage) callHistory.agentLanguage = agentLanguage;
     if (customerName)  callHistory.customerName  = customerName;
 
@@ -175,6 +176,10 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
             callId: callHistory._id,
             role,
             content,
+            startMs: item.startMs || item.start || null,
+            endMs: item.endMs || item.end || null,
+            confidence: item.confidence !== undefined ? item.confidence : null,
+            isFinal: item.isFinal !== undefined ? item.isFinal : true,
           });
           count++;
         }
@@ -193,6 +198,10 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
             callId: callHistory._id,
             role,
             content,
+            startMs: transcript.startMs || transcript.start || null,
+            endMs: transcript.endMs || transcript.end || null,
+            confidence: transcript.confidence !== undefined ? transcript.confidence : null,
+            isFinal: transcript.isFinal !== undefined ? transcript.isFinal : true,
           });
           console.log(`[Webhook Service] Saved 1 transcript item (object style) to DB`);
         }
@@ -226,12 +235,21 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
   }
 
   // 3. Update Call History record
-  callHistory.status = "completed";
+  // Don't overwrite terminal failure statuses — rejected/missed calls should stay that way
+  const terminalFailureStatuses = ["rejected", "missed", "no_answer", "transfer-failed"];
+  if (!terminalFailureStatuses.includes(callHistory.status)) {
+    callHistory.status = "completed";
+    callHistory.hangupCause = "normal_clearing";
+  } else {
+    console.log(`[Webhook Service] Preserving existing status "${callHistory.status}" (not overwriting with "completed")`);
+  }
   callHistory.endedAt = new Date();
   callHistory.sentiment = resolution.sentiment;
   callHistory.summary = resolution.summary;
   callHistory.nextAction = resolution.nextAction;
-  callHistory.resolution = resolution.resolution;
+  callHistory.resolution = terminalFailureStatuses.includes(callHistory.status) 
+    ? callHistory.resolution   // keep existing resolution (e.g. "rejected", "no_answer")
+    : resolution.resolution;   // use Gemini's parsed resolution
 
   // Save raw transcript string
   if (transcript) {
@@ -257,51 +275,58 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
   await callHistory.save();
 
   // 4. Update Lead Document status
+  // Skip if call-missed/call-rejected hooks already handled the lead status
   const terminalCompletedResolutions = ["interested", "deal_closed", "trial_setup"];
   const terminalFailedResolutions = ["not_interested", "wrong_number"];
-
-  if (terminalCompletedResolutions.includes(resolution.resolution)) {
-    lead.status = "completed";
-  } else if (terminalFailedResolutions.includes(resolution.resolution)) {
-    lead.status = "failed";
-  } else {
-    lead.status = "active";
-  }
-  await lead.save();
-
-  console.log(`[Webhook Service] Updated Lead ${lead._id} to status: ${lead.status}`);
-
-  // 5. Re-Queue Logic
-  const isTerminal = [...terminalCompletedResolutions, ...terminalFailedResolutions].includes(resolution.resolution);
-  const attemptCount = callHistory.attemptCount;
 
   let reQueued = false;
   let nextScheduledAt = null;
 
-  if (!isTerminal && attemptCount < 3) {
-    const DELAY_MS = 2 * 60 * 60 * 1000; 
-    nextScheduledAt = new Date(Date.now() + DELAY_MS);
-    const nextAttempt = attemptCount + 1;
-
-    const jobData = {
-      leadId: lead._id.toString(),
-      clientName: lead.clientName,
-      shopName: lead.shopName || "",
-      clientNumber: lead.clientNumber,
-      clientRequirement: lead.clientRequirement,
-      clientOtherDetails: lead.clientOtherDetails,
-      attemptNum: nextAttempt,
-    };
-
-    const job = await callQueue.add("initiate-call", jobData, {
-      delay: DELAY_MS,
-      jobId: `lead-${lead._id.toString()}-attempt-${nextAttempt}-${Date.now()}`
-    });
-
-    reQueued = true;
-    console.log(`[Webhook Service] 🔁 Re-queued next call (attempt #${nextAttempt}) with +2h delay | jobId=${job.id}`);
+  if (terminalFailureStatuses.includes(callHistory.status)) {
+    // call-missed / call-rejected / no_answer hooks already updated lead status — don't touch it
+    console.log(`[Webhook Service] Skipping lead status update — already handled by "${callHistory.status}" hook`);
   } else {
-    console.log(`[Webhook Service] No re-queue needed | isTerminal=${isTerminal} | attemptsMade=${attemptCount}`);
+    // Normal completed call — use Gemini's resolution to determine lead status
+    if (terminalCompletedResolutions.includes(resolution.resolution)) {
+      lead.status = "completed";
+    } else if (terminalFailedResolutions.includes(resolution.resolution)) {
+      lead.status = "failed";
+    } else {
+      lead.status = "active";
+    }
+    await lead.save();
+    console.log(`[Webhook Service] Updated Lead ${lead._id} to status: ${lead.status}`);
+
+    // 5. Re-Queue Logic — only for completed calls that aren't terminal
+    const isTerminal = [...terminalCompletedResolutions, ...terminalFailedResolutions].includes(resolution.resolution);
+    const attemptCount = callHistory.attemptCount;
+    const maxAttempts = lead.maxAttempts || 3;
+
+    if (!isTerminal && attemptCount < maxAttempts) {
+      const DELAY_MS = 2 * 60 * 60 * 1000; 
+      nextScheduledAt = new Date(Date.now() + DELAY_MS);
+      const nextAttempt = attemptCount + 1;
+
+      const jobData = {
+        leadId: lead._id.toString(),
+        clientName: lead.clientName,
+        shopName: lead.shopName || "",
+        clientNumber: lead.clientNumber,
+        clientRequirement: lead.clientRequirement,
+        clientOtherDetails: lead.clientOtherDetails,
+        attemptNum: nextAttempt,
+      };
+
+      const job = await callQueue.add("initiate-call", jobData, {
+        delay: DELAY_MS,
+        jobId: `lead-${lead._id.toString()}-attempt-${nextAttempt}-${Date.now()}`
+      });
+
+      reQueued = true;
+      console.log(`[Webhook Service] 🔁 Re-queued next call (attempt #${nextAttempt}) with +2h delay | jobId=${job.id}`);
+    } else {
+      console.log(`[Webhook Service] No re-queue needed | isTerminal=${isTerminal} | attemptsMade=${attemptCount}`);
+    }
   }
 
   // 6. Sync Followup with CRM (Delayed 10s to ensure recording URL is present)
@@ -351,6 +376,12 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
 
       const responseText = await crmResponse.text();
       console.log(`[CRM Followup Sync] Response from CRM API: Status=${crmResponse.status} | Body=${responseText}`);
+      
+      // If CRM sync succeeded, record idempotency timestamp
+      if (crmResponse.ok) {
+        recording.pushedToRcrmAt = new Date();
+        await recording.save();
+      }
 
     } catch (err) {
       console.error(`[CRM Followup Sync] ❌ Error syncing followup with audio:`, err.message);
@@ -486,6 +517,7 @@ export async function handleCallStatusUpdate(type, data, req) {
     callHistory.endedAt = eventTime;
     callHistory.hangupAt = eventTime;
     callHistory.resolution = isMissed ? "no_answer" : "rejected";
+    callHistory.hangupCause = isMissed ? "no_answer" : "rejected";
     
     if (isMissed) {
       console.log(`[Webhook Service] 🗑️ Removing recording and transcript for missed call: ${callHistory._id}`);
@@ -502,14 +534,15 @@ export async function handleCallStatusUpdate(type, data, req) {
     console.log(`[Webhook Service] Call History ${callHistory._id} updated to status "${callHistory.status}"`);
 
     if (lead) {
-      if (lead.totalAttempts >= 3) {
+      const maxAttempts = lead.maxAttempts || 3;
+      if (lead.totalAttempts >= maxAttempts) {
         lead.status = "failed";
         await lead.save();
-        console.log(`[Webhook Service] ⛔ Lead ${lead._id} reached max 3 attempts. Marked as 'failed', no more retries.`);
+        console.log(`[Webhook Service] ⛔ Lead ${lead._id} reached max ${maxAttempts} attempts. Marked as 'failed', no more retries.`);
       } else {
         lead.status = "pending";
         await lead.save();
-        console.log(`[Webhook Service] Lead ${lead._id} reset to 'pending' for retry (attempt ${lead.totalAttempts}/3)`);
+        console.log(`[Webhook Service] Lead ${lead._id} reset to 'pending' for retry (attempt ${lead.totalAttempts}/${maxAttempts})`);
       }
     }
   } else if (type === "call-transferred") {
@@ -518,6 +551,7 @@ export async function handleCallStatusUpdate(type, data, req) {
     callHistory.transferStatus = "success";
     callHistory.endedAt = eventTime;
     callHistory.hangupAt = eventTime;
+    callHistory.hangupCause = "transferred";
     await callHistory.save();
     console.log(`[Webhook Service] Call History ${callHistory._id} updated to status "transferred"`);
   } else if (type === "transfer-failed") {
@@ -526,6 +560,7 @@ export async function handleCallStatusUpdate(type, data, req) {
     callHistory.transferStatus = "failed";
     callHistory.endedAt = eventTime;
     callHistory.hangupAt = eventTime;
+    callHistory.hangupCause = "failed";
     await callHistory.save();
     console.log(`[Webhook Service] Call History ${callHistory._id} updated to status "transfer-failed"`);
   }

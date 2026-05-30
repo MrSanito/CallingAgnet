@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
         requirement: call.leadId?.clientRequirement || null,
         duration: durStr,
         durationSec: durSec,
-        status: call.status,
+        status: call.hangupCause === "normal_clearing" ? "accepted" : (call.hangupCause || call.status),
         resolution: call.resolution,
         sentiment: call.sentiment,
         summary: call.summary,

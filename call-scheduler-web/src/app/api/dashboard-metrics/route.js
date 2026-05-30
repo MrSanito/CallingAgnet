@@ -212,14 +212,17 @@ export async function GET() {
         : "—";
 
       const statusMap = {
-        completed: { label: "Completed", color: "emerald" },
+        completed: { label: "Accepted", color: "emerald" },
         accepted: { label: "Accepted", color: "emerald" },
+        normal_clearing: { label: "Accepted", color: "emerald" },
+        transferred: { label: "Transferred", color: "blue" },
         active: { label: "Active", color: "indigo" },
         pending: { label: "Pending", color: "slate" },
         failed: { label: "Failed", color: "rose" },
         rejected: { label: "Rejected", color: "rose" },
         busy: { label: "Busy", color: "amber" },
-        no_answer: { label: "No Answer", color: "orange" }
+        no_answer: { label: "No Answer", color: "orange" },
+        missed: { label: "Missed", color: "orange" }
       };
 
       const resMap = {
@@ -240,7 +243,8 @@ export async function GET() {
         neutral: { label: "Neutral", color: "slate" }
       };
 
-      const st = statusMap[c.status] || { label: c.status || "—", color: "slate" };
+      const derivedStatus = c.hangupCause || c.status;
+      const st = statusMap[derivedStatus] || statusMap[c.status] || { label: derivedStatus || "—", color: "slate" };
       const res = c.resolution ? (resMap[c.resolution] || { label: c.resolution, color: "slate" }) : null;
       const sent = c.sentiment ? (sentimentMap[c.sentiment.toLowerCase()] || null) : null;
       const tokens = c.tokenUsage ? `${c.tokenUsage.total_tokens ?? 0}` : null;
