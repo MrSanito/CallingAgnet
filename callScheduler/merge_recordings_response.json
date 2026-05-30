@@ -1,0 +1,389 @@
+{
+  "pageInfo": {
+    "currentPage": 1,
+    "perPage": 10,
+    "lastPage": 3,
+    "total": 26
+  },
+  "recordings": [
+    {
+      "id": "63949f6c-7f43-4629-9cd4-bd89937e5b11",
+      "channel1": [
+        {
+          "recordingId": "6a17d5d73b3a08dbc85762b6",
+          "participantId": "7axzlg1f"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a17d5d43b3a08dbc85762b4",
+          "participantId": "idapyh2u"
+        }
+      ],
+      "start": "2026-05-28T05:44:09.934Z",
+      "end": "2026-05-28T05:44:18.828Z",
+      "status": "completed",
+      "meetingId": "lj38-r7v3-aggt",
+      "sessionId": "6a17d5c1eb364dfd9da0e365",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 76
+        },
+        "filePath": "merge/audios/63949f6c-7f43-4629-9cd4-bd89937e5b11/63949f6c-7f43-4629-9cd4-bd89937e5b11.mp3",
+        "type": "audio",
+        "size": 1301660,
+        "ratio": {
+          "audio": 17130.712
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T05:44:18.827Z",
+        "updatedAt": "2026-05-28T05:44:18.827Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/63949f6c-7f43-4629-9cd4-bd89937e5b11/63949f6c-7f43-4629-9cd4-bd89937e5b11.mp3",
+        "id": "6a17d63264ccc7e74e598405"
+      }
+    },
+    {
+      "id": "3616fb7f-df71-466d-a520-e022631d9987",
+      "channel1": [
+        {
+          "recordingId": "6a17d50b3b3a08dbc85762b0",
+          "participantId": "w1r4hfdp"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a17d5083b3a08dbc85762ae",
+          "participantId": "ui66g697"
+        }
+      ],
+      "start": "2026-05-28T05:39:40.648Z",
+      "end": "2026-05-28T05:39:45.787Z",
+      "status": "completed",
+      "meetingId": "osnk-qaxp-4i6h",
+      "sessionId": "6a17d4fa2345abb1c6432874",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 10
+        },
+        "filePath": "merge/audios/3616fb7f-df71-466d-a520-e022631d9987/3616fb7f-df71-466d-a520-e022631d9987.mp3",
+        "type": "audio",
+        "size": 134012,
+        "ratio": {
+          "audio": 14100.589
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T05:39:45.785Z",
+        "updatedAt": "2026-05-28T05:39:45.785Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/3616fb7f-df71-466d-a520-e022631d9987/3616fb7f-df71-466d-a520-e022631d9987.mp3",
+        "id": "6a17d521370d84aa87675c2e"
+      }
+    },
+    {
+      "id": "19f0acb6-7557-4c91-8e34-8512330963c3",
+      "channel1": [
+        {
+          "recordingId": "6a17d4c23b3a08dbc85762ac",
+          "participantId": "3r8hy0i9"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a17d4bf3b3a08dbc85762aa",
+          "participantId": "blwsoycv"
+        }
+      ],
+      "start": "2026-05-28T05:38:29.293Z",
+      "status": "running",
+      "meetingId": "0t3g-uebj-cuoh",
+      "sessionId": "6a17d4b238b451248214a0e3"
+    },
+    {
+      "id": "f83b02ea-2b8c-4868-ab62-45fbb3760118",
+      "channel1": [
+        {
+          "recordingId": "6a17d4b43b3a08dbc85762a8",
+          "participantId": "zo7ty0tf"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a17d4b13b3a08dbc85762a6",
+          "participantId": "fluduywy"
+        }
+      ],
+      "start": "2026-05-28T05:38:18.629Z",
+      "end": "2026-05-28T05:38:23.947Z",
+      "status": "completed",
+      "meetingId": "fo00-vvnx-yb6e",
+      "sessionId": "6a17d49f562c42562f69ca39",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 15
+        },
+        "filePath": "merge/audios/f83b02ea-2b8c-4868-ab62-45fbb3760118/f83b02ea-2b8c-4868-ab62-45fbb3760118.mp3",
+        "type": "audio",
+        "size": 128828,
+        "ratio": {
+          "audio": 8814.176
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T05:38:23.943Z",
+        "updatedAt": "2026-05-28T05:38:23.943Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/f83b02ea-2b8c-4868-ab62-45fbb3760118/f83b02ea-2b8c-4868-ab62-45fbb3760118.mp3",
+        "id": "6a17d4cf3a6c55c298c8e92f"
+      }
+    },
+    {
+      "id": "dbd3cc98-9e4e-4b16-a623-b2fc09cf8f3c",
+      "channel1": [
+        {
+          "recordingId": "6a17a60e3b3a08dbc8576292",
+          "participantId": "9deruyqx"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a17a60c3b3a08dbc8576290",
+          "participantId": "0qqymrxn"
+        }
+      ],
+      "start": "2026-05-28T02:19:38.765Z",
+      "end": "2026-05-28T02:19:45.536Z",
+      "status": "completed",
+      "meetingId": "wgeo-kopf-r2fy",
+      "sessionId": "6a17a5f82345abb1c63f32aa",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 36
+        },
+        "filePath": "merge/audios/dbd3cc98-9e4e-4b16-a623-b2fc09cf8f3c/dbd3cc98-9e4e-4b16-a623-b2fc09cf8f3c.mp3",
+        "type": "audio",
+        "size": 575108,
+        "ratio": {
+          "audio": 16114.885
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T02:19:45.533Z",
+        "updatedAt": "2026-05-28T02:19:45.533Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/dbd3cc98-9e4e-4b16-a623-b2fc09cf8f3c/dbd3cc98-9e4e-4b16-a623-b2fc09cf8f3c.mp3",
+        "id": "6a17a641c9082982c052da83"
+      }
+    },
+    {
+      "id": "629d5930-5949-4bbd-9fe7-e21306b0110b",
+      "channel1": [
+        {
+          "recordingId": "6a179f723b3a08dbc857628e",
+          "participantId": "h7vj6evf"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a179f6f3b3a08dbc857628c",
+          "participantId": "e0ngrowq"
+        }
+      ],
+      "start": "2026-05-28T01:51:04.913Z",
+      "end": "2026-05-28T01:51:10.530Z",
+      "status": "completed",
+      "meetingId": "46yl-tq2t-ro9g",
+      "sessionId": "6a179f5b38b45124820f540d",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 14
+        },
+        "filePath": "merge/audios/629d5930-5949-4bbd-9fe7-e21306b0110b/629d5930-5949-4bbd-9fe7-e21306b0110b.mp3",
+        "type": "audio",
+        "size": 231212,
+        "ratio": {
+          "audio": 16356.254
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T01:51:10.526Z",
+        "updatedAt": "2026-05-28T01:51:10.526Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/629d5930-5949-4bbd-9fe7-e21306b0110b/629d5930-5949-4bbd-9fe7-e21306b0110b.mp3",
+        "id": "6a179f8ec9082982c052d385"
+      }
+    },
+    {
+      "id": "091455de-37ce-4921-b3d0-396626c823eb",
+      "channel1": [
+        {
+          "recordingId": "6a179db93b3a08dbc857628a",
+          "participantId": "2m659jhf"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a179db63b3a08dbc8576288",
+          "participantId": "cajjrkjo"
+        }
+      ],
+      "start": "2026-05-28T01:43:48.506Z",
+      "end": "2026-05-28T01:43:53.891Z",
+      "status": "completed",
+      "meetingId": "hax9-ei2q-1gir",
+      "sessionId": "6a179da7562c42562f63e20e",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 14
+        },
+        "filePath": "merge/audios/091455de-37ce-4921-b3d0-396626c823eb/091455de-37ce-4921-b3d0-396626c823eb.mp3",
+        "type": "audio",
+        "size": 209972,
+        "ratio": {
+          "audio": 14581.389
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T01:43:53.887Z",
+        "updatedAt": "2026-05-28T01:43:53.887Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/091455de-37ce-4921-b3d0-396626c823eb/091455de-37ce-4921-b3d0-396626c823eb.mp3",
+        "id": "6a179dd9b569904ba8f8dc20"
+      }
+    },
+    {
+      "id": "ba4dfcba-740a-4869-8491-787380a1828a",
+      "channel1": [
+        {
+          "recordingId": "6a179d603b3a08dbc8576286",
+          "participantId": "7slua6wj"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a179d5d3b3a08dbc8576284",
+          "participantId": "lpwoqjuh"
+        }
+      ],
+      "start": "2026-05-28T01:42:43.063Z",
+      "end": "2026-05-28T01:42:49.874Z",
+      "status": "completed",
+      "meetingId": "217a-ad1e-pyb3",
+      "sessionId": "6a179d4f2345abb1c63f0602",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 37
+        },
+        "filePath": "merge/audios/ba4dfcba-740a-4869-8491-787380a1828a/ba4dfcba-740a-4869-8491-787380a1828a.mp3",
+        "type": "audio",
+        "size": 548636,
+        "ratio": {
+          "audio": 14911.829
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T01:42:49.871Z",
+        "updatedAt": "2026-05-28T01:42:49.871Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/ba4dfcba-740a-4869-8491-787380a1828a/ba4dfcba-740a-4869-8491-787380a1828a.mp3",
+        "id": "6a179d997c33c8ff319db12d"
+      }
+    },
+    {
+      "id": "d9c9e5eb-5f26-4453-a418-38ad422a39e8",
+      "channel1": [
+        {
+          "recordingId": "6a179b863b3a08dbc8576282",
+          "participantId": "vqfg8uvr"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a179b833b3a08dbc8576280",
+          "participantId": "z5qmf2ds"
+        }
+      ],
+      "start": "2026-05-28T01:34:43.124Z",
+      "end": "2026-05-28T01:34:49.250Z",
+      "status": "completed",
+      "meetingId": "mciu-swbl-tc4b",
+      "sessionId": "6a179b71562c42562f63d46e",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 32
+        },
+        "filePath": "merge/audios/d9c9e5eb-5f26-4453-a418-38ad422a39e8/d9c9e5eb-5f26-4453-a418-38ad422a39e8.mp3",
+        "type": "audio",
+        "size": 487748,
+        "ratio": {
+          "audio": 15211.702
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-28T01:34:49.247Z",
+        "updatedAt": "2026-05-28T01:34:49.247Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/d9c9e5eb-5f26-4453-a418-38ad422a39e8/d9c9e5eb-5f26-4453-a418-38ad422a39e8.mp3",
+        "id": "6a179bb95124b8c2f28168b6"
+      }
+    },
+    {
+      "id": "26e5c974-f7bb-4e48-9131-b98fb557b226",
+      "channel1": [
+        {
+          "recordingId": "6a171c263b3a08dbc857626a",
+          "participantId": "9yau4rhd"
+        }
+      ],
+      "channel2": [
+        {
+          "recordingId": "6a171c233b3a08dbc8576268",
+          "participantId": "tl7hxdka"
+        }
+      ],
+      "start": "2026-05-27T16:31:41.346Z",
+      "end": "2026-05-27T16:31:48.960Z",
+      "status": "completed",
+      "meetingId": "o1kr-msth-u5j1",
+      "sessionId": "6a171c152345abb1c636b3b3",
+      "file": {
+        "meta": {
+          "format": "mp3",
+          "duration": 63
+        },
+        "filePath": "merge/audios/26e5c974-f7bb-4e48-9131-b98fb557b226/26e5c974-f7bb-4e48-9131-b98fb557b226.mp3",
+        "type": "audio",
+        "size": 1055468,
+        "ratio": {
+          "audio": 16715.254
+        },
+        "userStorage": null,
+        "accessMode": "public",
+        "fallbackUsed": false,
+        "encrypted": false,
+        "createdAt": "2026-05-27T16:31:48.958Z",
+        "updatedAt": "2026-05-27T16:31:48.958Z",
+        "fileUrl": "https://cdn.videosdk.live/merge/audios/26e5c974-f7bb-4e48-9131-b98fb557b226/26e5c974-f7bb-4e48-9131-b98fb557b226.mp3",
+        "id": "6a171c74370d84aa876099dd"
+      }
+    }
+  ]
+}

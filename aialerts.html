@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SalesCRM AI - Alerts & Flags Dashboard (Testing)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts - Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for clean aesthetics */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* Pulse active animation */
+    .pulse-status {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: pulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse {
+      to {
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+      }
+    }
+    .selected-row {
+      background-color: rgba(99, 102, 241, 0.08) !important;
+      border-left: 4px solid #6366f1 !important;
+    }
+  </style>
+</head>
+<body class="h-full font-sans text-slate-800 antialiased flex">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800">
+    <div>
+      <!-- Brand Logo -->
+      <div class="px-6 py-5 border-b border-slate-800 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg text-white shadow-md shadow-indigo-500/20">S</div>
+        <div>
+          <h2 class="font-bold text-sm leading-tight">SalesCRM AI</h2>
+          <span class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block pulse-status"></span>
+            Test Server Active
+          </span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="px-3 py-4 space-y-1">
+        <a href="aivoice.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white text-sm font-medium transition-all">
+          <span>📞</span>
+          AI Voice Dashboard
+        </a>
+        <a href="aialerts.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium transition-all shadow-sm">
+          <span>🚩</span>
+          Alerts & Flags
+        </a>
+      </nav>
+    </div>
+
+    <!-- User / Profile Summary -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/40 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-400">VS</div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-white truncate">Vishal Sharma</p>
+        <p class="text-[10px] text-slate-400 truncate">Administrator</p>
+      </div>
+      <span class="text-[11px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">OFFLINE</span>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 overflow-y-auto min-h-screen bg-slate-50 flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm shadow-slate-100/50">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          Alerts &amp; Flags Dashboard
+          <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-indigo-50/80 text-indigo-700 border border-indigo-100">Interactive Preview</span>
+        </h1>
+        <p class="text-xs text-slate-500">Flags, Transcripts, Call History &amp; AI Summariser (Click an alert to view its details)</p>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <!-- Date Selector -->
+        <div class="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-white text-xs text-slate-700 font-medium shadow-sm">
+          <span class="text-slate-400">📅</span>
+          <span>25 May 2026 - 31 May 2026</span>
+        </div>
+        <!-- Table Search Bar -->
+        <div class="relative">
+          <input type="text" id="alertsSearch" onkeyup="filterAlerts()" placeholder="Search alerts..." class="w-48 pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all" />
+          <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+        </div>
+        <!-- Reload Button -->
+        <button onclick="window.location.reload();" class="border border-slate-200 rounded-lg p-2 bg-white hover:bg-slate-50 transition-colors shadow-sm" title="Refresh Page">
+          <span class="text-slate-600 block text-xs">🔄</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="p-6 space-y-6">
+
+      <!-- STAT CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <!-- Stat Item 1 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-4 flex items-start gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-lg flex-shrink-0">🚩</div>
+          <div>
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Alerts</p>
+            <p class="text-2xl font-extrabold text-slate-900">34</p>
+            <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+              <span>↑</span> 12.5% vs last week
+            </p>
+          </div>
+        </div>
+        <!-- Stat Item 2 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-4 flex items-start gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-lg flex-shrink-0">⬇️</div>
+          <div>
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">High Priority</p>
+            <p class="text-2xl font-extrabold text-rose-600">8</p>
+            <p class="text-[10px] text-rose-500 font-semibold flex items-center gap-0.5">
+              <span>↑</span> Action Required Immediately
+            </p>
+          </div>
+        </div>
+        <!-- Stat Item 3 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-4 flex items-start gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">🏳️</div>
+          <div>
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Medium Priority</p>
+            <p class="text-2xl font-extrabold text-amber-600">14</p>
+            <p class="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
+              Awaiting review queue
+            </p>
+          </div>
+        </div>
+        <!-- Stat Item 4 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-4 flex items-start gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">📗</div>
+          <div>
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Low Priority</p>
+            <p class="text-2xl font-extrabold text-emerald-600">12</p>
+            <p class="text-[10px] text-slate-400 font-semibold">
+              Minor inquiries / queries
+            </p>
+          </div>
+        </div>
+        <!-- Stat Item 5 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-4 flex items-start gap-3.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-lg flex-shrink-0">📋</div>
+          <div>
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Resolved</p>
+            <p class="text-2xl font-extrabold text-purple-600">45</p>
+            <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+              <span>↑</span> 94% Resolution efficiency
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIDDLE ROW: ALERTS TABLE (LEFT) & ALERTS BY FLAG CHART (RIGHT) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Alerts Table -->
+        <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800 text-sm">Alerts / Flags Table</h2>
+              <span class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Click any row to inspect details</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left" id="alertsTable">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-200">
+                    <th class="pb-2 font-semibold">Priority</th>
+                    <th class="pb-2 font-semibold">Flag Type</th>
+                    <th class="pb-2 font-semibold">Retailer / Client</th>
+                    <th class="pb-2 font-semibold">Distributor / MR</th>
+                    <th class="pb-2 font-semibold">Time</th>
+                    <th class="pb-2 font-semibold">AI Summary Snippet</th>
+                    <th class="pb-2 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="alertsTableBody">
+                  <!-- Row 1 -->
+                  <tr onclick="loadAlertDetail(1, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">High</span>
+                    </td>
+                    <td class="py-3 font-semibold text-rose-600">Price Discrepancy</td>
+                    <td class="py-3 font-semibold text-slate-800">Shree Medical Store</td>
+                    <td class="py-3 text-slate-600">Vardhaman (MR: Amit)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">27 May, 20:30</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Billed ₹150 instead of ₹120 for Box A.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                  <!-- Row 2 -->
+                  <tr onclick="loadAlertDetail(2, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">High</span>
+                    </td>
+                    <td class="py-3 font-semibold text-rose-600">Payment Dispute</td>
+                    <td class="py-3 font-semibold text-slate-800">Metro Chemists</td>
+                    <td class="py-3 text-slate-600">Mahaveer (MR: Raj)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">27 May, 18:15</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Client reports ₹5k payment uncredited.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                  <!-- Row 3 -->
+                  <tr onclick="loadAlertDetail(3, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">Medium</span>
+                    </td>
+                    <td class="py-3 font-semibold text-amber-600">Delivery Delay</td>
+                    <td class="py-3 font-semibold text-slate-800">Gupta Pharma</td>
+                    <td class="py-3 text-slate-600">Khandelwal (MR: Sonu)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">26 May, 14:20</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Pending orders for 5 days. stockout risk.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                  <!-- Row 4 -->
+                  <tr onclick="loadAlertDetail(4, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">Medium</span>
+                    </td>
+                    <td class="py-3 font-semibold text-amber-600">Wrong Scheme</td>
+                    <td class="py-3 font-semibold text-slate-800">City Healthcare</td>
+                    <td class="py-3 text-slate-600">Vardhaman (MR: Amit)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">26 May, 11:00</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Buy 10 Get 2 scheme not applied to order.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                  <!-- Row 5 -->
+                  <tr onclick="loadAlertDetail(5, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">Low</span>
+                    </td>
+                    <td class="py-3 font-semibold text-emerald-600">Product Inquiry</td>
+                    <td class="py-3 font-semibold text-slate-800">Apex Pharmacy</td>
+                    <td class="py-3 text-slate-600">Mahaveer (MR: Raj)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">25 May, 09:30</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Inquired about bulk rate for generics.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                  <!-- Row 6 -->
+                  <tr onclick="loadAlertDetail(6, this)" class="hover:bg-slate-50/70 transition-all cursor-pointer">
+                    <td class="py-3">
+                      <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[9px] uppercase">Low</span>
+                    </td>
+                    <td class="py-3 font-semibold text-emerald-600">Info Update</td>
+                    <td class="py-3 font-semibold text-slate-800">HealthPlus Pharma</td>
+                    <td class="py-3 text-slate-600">Khandelwal (MR: Sonu)</td>
+                    <td class="py-3 text-slate-400 font-mono text-[10px]">24 May, 16:45</td>
+                    <td class="py-3 text-slate-500 max-w-[150px] truncate">Requested billing address update.</td>
+                    <td class="py-3 text-right">
+                      <button class="text-indigo-600 hover:text-indigo-800 font-bold">Inspect</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+            <span>6 alerts loaded. High: 2, Medium: 2, Low: 2.</span>
+            <button class="text-indigo-600 font-bold hover:underline">View Archived Alerts</button>
+          </div>
+        </div>
+
+        <!-- Doughnut Chart: Alerts by Flag Type -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-slate-800 text-sm">Alerts by Flag Type</h2>
+              <span class="text-[10px] text-slate-400 font-medium">Categorization</span>
+            </div>
+            
+            <div class="relative h-44 flex items-center justify-center">
+              <canvas id="flagChart"></canvas>
+            </div>
+            
+            <div class="space-y-2 mt-5">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded bg-rose-500"></span>
+                  <span class="text-slate-600 font-medium">Price Discrepancy</span>
+                </div>
+                <span class="text-slate-800 font-bold">12 (35.3%)</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded bg-amber-500"></span>
+                  <span class="text-slate-600 font-medium">Delivery & Schemes</span>
+                </div>
+                <span class="text-slate-800 font-bold">16 (47.1%)</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded bg-slate-300"></span>
+                  <span class="text-slate-600 font-medium">Inquiries & Info</span>
+                </div>
+                <span class="text-slate-800 font-bold">6 (17.6%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW: RECENT TRANSCRIPTS & AI SUMMARISER (LEFT) | CALL HISTORY (RIGHT) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Transcripts & AI Summariser (Selected detail loads here) -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800 text-sm">Transcript &amp; AI Summariser</h2>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="text-emerald-500">📞</span>
+                <span class="font-bold text-slate-700" id="detailCallId">Call ID: CAL-9821</span>
+                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded" id="detailDuration">Duration: 02:45</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Left: Transcript Bubble Log -->
+              <div>
+                <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Transcript Log</p>
+                <div class="space-y-3.5 max-h-64 overflow-y-auto pr-1" id="detailTranscriptLog">
+                  <!-- Loaded via JS -->
+                </div>
+              </div>
+
+              <!-- Right: AI Summariser Pane -->
+              <div class="border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-4">
+                <p class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">AI Summariser Insights</p>
+                
+                <div class="space-y-3" id="detailSummariser">
+                  <!-- Loaded via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Call History for the active Retailer -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800 text-sm" id="historyTitle">Call History (Retailer: Shree Medical Store)</h2>
+              <span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">Activity Logs</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-200">
+                    <th class="pb-2 font-semibold">Date &amp; Time</th>
+                    <th class="pb-2 font-semibold">Call ID</th>
+                    <th class="pb-2 font-semibold">Duration</th>
+                    <th class="pb-2 font-semibold">Status</th>
+                    <th class="pb-2 font-semibold">AI Agent ID</th>
+                    <th class="pb-2 font-semibold text-right">Flag Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="historyTableBody">
+                  <!-- Loaded via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+            <span id="historyCountText">Total Calls: 3</span>
+            <button class="text-indigo-600 font-bold hover:underline">View Full Retailer Audit Trail</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between mt-auto text-xs text-slate-400 font-medium">
+      <span>All times are in Asia/Kolkata (IST)</span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block pulse-status"></span>
+        <span>AI Auto-Classification Enabled</span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // ── MOCK DATA SOURCE FOR INTERACTIVE PREVIEW ──
+    const alertDetails = {
+      1: {
+        retailer: 'Shree Medical Store',
+        callId: 'CAL-9821',
+        duration: '02:45',
+        priority: 'High',
+        flag: 'Price Discrepancy',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello, Shree Medical Store? I am calling from Vardhaman Distributors regarding your order verification.', time: '14:02:10' },
+          { role: 'Retailer (Client)', text: 'Hello. Yes, there is a serious issue. Amit (MR) promised me ₹120 per box for Box A, but the invoice shows ₹150. Why?', time: '14:02:35' },
+          { role: 'AI Representative', text: 'I apologize for the discrepancy. Let me flag this invoice price discrepancy. I will register the promised price as ₹120 instead of ₹150 for Box A.', time: '14:03:02' },
+          { role: 'Retailer (Client)', text: 'Please resolve it soon. I will hold the payment until then.', time: '14:03:40' }
+        ],
+        summary: {
+          short: 'Price mismatch on Box A order.',
+          issue: 'Invoice lists ₹150 per box instead of promised ₹120.',
+          response: 'Client refusing to pay until invoice is reissued with the discount.',
+          cause: 'Distributor promotion code not linked to retailer ERP code.',
+          action: 'Billing Department to issue credit note of ₹30/box and update ERP rate.'
+        },
+        history: [
+          { date: '27 May, 20:30', id: 'CAL-9821', dur: '02:45', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-02', flag: 'Price Discrepancy', flagColor: 'bg-rose-100 text-rose-700 font-bold' },
+          { date: '25 May, 11:20', id: 'CAL-9210', dur: '01:50', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-01', flag: 'Delivery Check', flagColor: 'bg-slate-100 text-slate-600' },
+          { date: '20 May, 09:40', id: 'CAL-8902', dur: '00:45', status: 'NO ANSWER', statusColor: 'text-slate-400', agent: 'AI-REP-02', flag: '-', flagColor: 'bg-slate-50 text-slate-400' }
+        ]
+      },
+      2: {
+        retailer: 'Metro Chemists',
+        callId: 'CAL-9810',
+        duration: '03:15',
+        priority: 'High',
+        flag: 'Payment Dispute',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello, Metro Chemists? This is Mahaveer Distributors regarding a balance check.', time: '18:12:00' },
+          { role: 'Retailer (Client)', text: 'Listen, I paid ₹5,000 via UPI to your representative Raj on May 24th, but the billing statement still shows ₹5,000 outstanding.', time: '18:12:45' },
+          { role: 'AI Representative', text: 'Thank you for the reference. I am flagging this payment mismatch immediately so we can verify the transaction record.', time: '18:13:20' }
+        ],
+        summary: {
+          short: '₹5,000 payment not showing in statement.',
+          issue: 'Client paid ₹5,000 via UPI on May 24th; unpaid in account.',
+          response: 'Provided UPI reference number; demands balance sheet update.',
+          cause: 'Bank settlement API delayed or representative did not deposit cash.',
+          action: 'Finance Team to check Raj\'s settlement record and credit accounts.'
+        },
+        history: [
+          { date: '27 May, 18:15', id: 'CAL-9810', dur: '03:15', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-01', flag: 'Payment Dispute', flagColor: 'bg-rose-100 text-rose-700 font-bold' },
+          { date: '24 May, 12:05', id: 'CAL-9102', dur: '02:10', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-02', flag: 'Order Taken', flagColor: 'bg-emerald-100 text-emerald-700' }
+        ]
+      },
+      3: {
+        retailer: 'Gupta Pharma',
+        callId: 'CAL-9740',
+        duration: '01:55',
+        priority: 'Medium',
+        flag: 'Delivery Delay',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello, calling Gupta Pharma on behalf of Khandelwal Medicos regarding your delivery.', time: '14:18:10' },
+          { role: 'Retailer (Client)', text: 'Yes, my order has been pending for 5 days. I have critical shortage of antibiotics. If it is not delivered by tomorrow, I cancel.', time: '14:18:40' },
+          { role: 'AI Representative', text: 'Understood the urgency. I will escalate this to logistics dispatch as an urgent stockout risk.', time: '14:19:15' }
+        ],
+        summary: {
+          short: 'Antibiotics delivery pending for 5 days.',
+          issue: 'Severe shortage of antibiotics due to 5-day delivery delay.',
+          response: 'Client threatens order cancellation if not received tomorrow.',
+          cause: 'Logistics delivery van broke down on Route 4.',
+          action: 'Dispatch replacement shipment via courier express immediately.'
+        },
+        history: [
+          { date: '26 May, 14:20', id: 'CAL-9740', dur: '01:55', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-02', flag: 'Delivery Delay', flagColor: 'bg-amber-100 text-amber-700 font-bold' }
+        ]
+      },
+      4: {
+        retailer: 'City Healthcare',
+        callId: 'CAL-9705',
+        duration: '02:20',
+        priority: 'Medium',
+        flag: 'Wrong Scheme',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello, City Healthcare? I am calling from Vardhaman Distributors to confirm your order details.', time: '10:58:00' },
+          { role: 'Retailer (Client)', text: 'I ordered 10 boxes of Syrup B. The scheme was Buy 10 Get 2 Free, but the delivery package only has 10 boxes.', time: '10:58:45' },
+          { role: 'AI Representative', text: 'Thank you for raising this. I am registering the missing scheme promotional items so we can ship the 2 free boxes.', time: '10:59:30' }
+        ],
+        summary: {
+          short: 'Promotional scheme free items missing.',
+          issue: 'Syrup B order missing 2 Free boxes under Buy 10 Get 2 scheme.',
+          response: 'Demands credit/delivery of the 2 missing promotional syrup boxes.',
+          cause: 'Packer did not add promotional boxes during box staging.',
+          action: 'Staging to add 2 boxes of Syrup B to the next morning dispatch.'
+        },
+        history: [
+          { date: '26 May, 11:00', id: 'CAL-9705', dur: '02:20', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-01', flag: 'Wrong Scheme', flagColor: 'bg-amber-100 text-amber-700 font-bold' }
+        ]
+      },
+      5: {
+        retailer: 'Apex Pharmacy',
+        callId: 'CAL-9520',
+        duration: '01:30',
+        priority: 'Low',
+        flag: 'Product Inquiry',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello, Apex Pharmacy? Calling from Mahaveer Distributors.', time: '09:28:10' },
+          { role: 'Retailer (Client)', text: 'Do you have bulk rates for Generic Drug C? What is the pricing if I order 100 boxes?', time: '09:28:50' },
+          { role: 'AI Representative', text: 'Yes, let me check the generic price catalogs and refer this to the MR to send you a customized quotation.', time: '09:29:15' }
+        ],
+        summary: {
+          short: 'Bulk price inquiry for Generic Drug C.',
+          issue: 'Customer requested discount parameters for 100 boxes of Generic C.',
+          response: 'Client is interested in buying if MR offers competitive pricing.',
+          cause: 'General sales pipeline inquiry.',
+          action: 'Task MR Raj to call or email bulk quotation sheets by today.'
+        },
+        history: [
+          { date: '25 May, 09:30', id: 'CAL-9520', dur: '01:30', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-03', flag: 'Product Inquiry', flagColor: 'bg-emerald-100 text-emerald-700 font-bold' }
+        ]
+      },
+      6: {
+        retailer: 'HealthPlus Pharmacy',
+        callId: 'CAL-9421',
+        duration: '01:40',
+        priority: 'Low',
+        flag: 'Info Update',
+        transcript: [
+          { role: 'AI Representative', text: 'Hello HealthPlus Pharmacy. Calling regarding your billing details.', time: '16:43:00' },
+          { role: 'Retailer (Client)', text: 'Yes, we changed our billing address last month, but the latest invoices still show our old address. Please update it.', time: '16:43:40' },
+          { role: 'AI Representative', text: 'Understood. I will submit the updated billing address details to the records department immediately.', time: '16:44:10' }
+        ],
+        summary: {
+          short: 'Billing address mismatch in invoice records.',
+          issue: 'Invoice reports old billing address instead of newly relocated address.',
+          response: 'Provided new physical address details for database update.',
+          cause: 'Billing profile in master ERP was not updated after branch shift.',
+          action: 'IT Admin to override billing address in active ERP portal.'
+        },
+        history: [
+          { date: '24 May, 16:45', id: 'CAL-9421', dur: '01:40', status: 'ANSWERED', statusColor: 'text-indigo-600', agent: 'AI-REP-02', flag: 'Info Update', flagColor: 'bg-emerald-100 text-emerald-700 font-bold' }
+        ]
+      }
+    };
+
+    // ── FUNCTION TO DYNAMICALLY POPULATE TRANSCRIPTS & INSIGHTS ──
+    function loadAlertDetail(id, element) {
+      // Highlight row selection
+      const rows = document.getElementById('alertsTableBody').getElementsByTagName('tr');
+      for (let r of rows) {
+        r.classList.remove('selected-row');
+      }
+      if (element) {
+        element.classList.add('selected-row');
+      }
+
+      const d = alertDetails[id];
+      if (!d) return;
+
+      // Update Call Info Header
+      document.getElementById('detailCallId').innerText = `Call ID: ${d.callId}`;
+      document.getElementById('detailDuration').innerText = `Duration: ${d.duration}`;
+
+      // Update History Title
+      document.getElementById('historyTitle').innerText = `Call History (Retailer: ${d.retailer})`;
+
+      // Render Transcripts Bubbles
+      const transContainer = document.getElementById('detailTranscriptLog');
+      transContainer.innerHTML = '';
+      d.transcript.forEach(t => {
+        const isAI = t.role.includes('AI');
+        const bubble = document.createElement('div');
+        bubble.className = 'space-y-1';
+        bubble.innerHTML = `
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isAI ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}">${t.role}</span>
+            <span class="text-[9px] text-slate-400 font-mono">${t.time}</span>
+          </div>
+          <p class="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100 inline-block max-w-full">${t.text}</p>
+        `;
+        transContainer.appendChild(bubble);
+      });
+
+      // Render AI Summaries Pane
+      const sumContainer = document.getElementById('detailSummariser');
+      sumContainer.innerHTML = `
+        <div>
+          <p class="text-[10px] font-bold text-slate-600 uppercase">Short Summary</p>
+          <p class="text-xs text-slate-600 font-medium">${d.summary.short}</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-600 uppercase">Issue Summary</p>
+          <p class="text-xs text-slate-600 font-medium">${d.summary.issue}</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-600 uppercase">Customer Response</p>
+          <p class="text-xs text-slate-600 font-medium">${d.summary.response}</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-600 uppercase">Root Cause (AI)</p>
+          <p class="text-xs text-rose-500 font-semibold flex items-center gap-1">📍 ${d.summary.cause}</p>
+        </div>
+        <div>
+          <p class="text-[10px] font-bold text-slate-600 uppercase">Action Needed</p>
+          <p class="text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded border border-indigo-100 mt-1 inline-block">✅ ${d.summary.action}</p>
+        </div>
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-50 text-xs">
+          <span class="text-slate-500 font-medium">Priority:</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+            d.priority === 'High' ? 'bg-rose-100 text-rose-700' :
+            d.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+          }">${d.priority}</span>
+          <span class="text-slate-300">|</span>
+          <span class="text-slate-500 font-medium">Flag:</span>
+          <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-[10px] font-semibold">${d.flag}</span>
+        </div>
+      `;
+
+      // Render Call History
+      const histContainer = document.getElementById('historyTableBody');
+      histContainer.innerHTML = '';
+      d.history.forEach(h => {
+        const histRow = document.createElement('tr');
+        histRow.className = 'hover:bg-slate-50/50';
+        histRow.innerHTML = `
+          <td class="py-2.5 text-slate-600 font-medium">${h.date}</td>
+          <td class="py-2.5 text-slate-700 font-semibold font-mono text-[10px]">${h.id}</td>
+          <td class="py-2.5 text-slate-600">${h.dur}</td>
+          <td class="py-2.5 ${h.statusColor} font-semibold">${h.status}</td>
+          <td class="py-2.5 text-slate-400 font-mono text-[10px]">${h.agent}</td>
+          <td class="py-2.5 text-right">
+            <span class="px-1.5 py-0.5 rounded text-[9px] uppercase ${h.flagColor}">${h.flag}</span>
+          </td>
+        `;
+        histContainer.appendChild(h.history ? '' : histRow);
+      });
+      
+      // Update Call History count
+      document.getElementById('historyCountText').innerText = `Total Calls: ${d.history.length}`;
+    }
+
+    // Load first alert on start
+    window.onload = function() {
+      const firstRow = document.getElementById('alertsTableBody').getElementsByTagName('tr')[0];
+      loadAlertDetail(1, firstRow);
+    };
+
+    // ── ALERTS CHART DOUGHNUT ──
+    const flagCtx = document.getElementById('flagChart').getContext('2d');
+    new Chart(flagCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Price Discrepancy', 'Delivery & Schemes', 'Inquiries & Info'],
+        datasets: [{
+          data: [12, 16, 6],
+          backgroundColor: ['#f43f5e', '#f59e0b', '#cbd5e1'],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+
+    // ── ALERTS SEARCH FILTER ──
+    function filterAlerts() {
+      const input = document.getElementById('alertsSearch').value.toLowerCase();
+      const table = document.getElementById('alertsTable');
+      const rows = table.getElementsByTagName('tr');
+      for (let i = 1; i < rows.length; i++) {
+        const text = rows[i].innerText.toLowerCase();
+        rows[i].style.display = text.includes(input) ? '' : 'none';
+      }
+    }
+  </script>
+</body>
+</html>

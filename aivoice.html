@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SalesCRM AI - AI Voice Dashboard (Testing)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts - Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for clean aesthetics */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* Pulse active animation */
+    .pulse-status {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: pulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse {
+      to {
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+      }
+    }
+  </style>
+</head>
+<body class="h-full font-sans text-slate-800 antialiased flex">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-800">
+    <div>
+      <!-- Brand Logo -->
+      <div class="px-6 py-5 border-b border-slate-800 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg text-white shadow-md shadow-indigo-500/20">S</div>
+        <div>
+          <h2 class="font-bold text-sm leading-tight">SalesCRM AI</h2>
+          <span class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block pulse-status"></span>
+            Test Server Active
+          </span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="px-3 py-4 space-y-1">
+        <a href="aivoice.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium transition-all shadow-sm">
+          <span>📞</span>
+          AI Voice Dashboard
+        </a>
+        <a href="aialerts.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white text-sm font-medium transition-all">
+          <span>🚩</span>
+          Alerts & Flags
+        </a>
+      </nav>
+    </div>
+
+    <!-- User / Profile Summary -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/40 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-400">VS</div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-white truncate">Vishal Sharma</p>
+        <p class="text-[10px] text-slate-400 truncate">Administrator</p>
+      </div>
+      <span class="text-[11px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">OFFLINE</span>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 overflow-y-auto min-h-screen bg-slate-50 flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm shadow-slate-100/50">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          AI Voice Dashboard
+          <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-indigo-50/80 text-indigo-700 border border-indigo-100">Local Test Mode</span>
+        </h1>
+        <p class="text-xs text-slate-500">Performance, Usage, Analytics &amp; Operations Overview (Simulated Data)</p>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <!-- Date Selector -->
+        <div class="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-white text-xs text-slate-700 font-medium shadow-sm">
+          <span class="text-slate-400">📅</span>
+          <span>Last 7 Days (May 2026)</span>
+        </div>
+        <!-- Table Search Bar -->
+        <div class="relative">
+          <input type="text" id="dashboardSearch" onkeyup="filterTables()" placeholder="Search tables..." class="w-48 pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all" />
+          <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+        </div>
+        <!-- Reload Button -->
+        <button onclick="window.location.reload();" class="border border-slate-200 rounded-lg p-2 bg-white hover:bg-slate-50 transition-colors shadow-sm" title="Refresh Page">
+          <span class="text-slate-600 block text-xs">🔄</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="p-6 space-y-6">
+
+      <!-- WARNING FOR PROD DOWN -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-800 shadow-sm">
+        <span class="text-xl mt-0.5">⚠️</span>
+        <div class="flex-1">
+          <h3 class="font-semibold text-sm leading-tight">Production Environment Bypass</h3>
+          <p class="text-xs text-amber-700 mt-1">This HTML sandbox bypasses Next.js page loaders and reads from hardcoded high-fidelity mock data. It is specifically built for debugging dashboard modules independent of backend crashes or database locks.</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-amber-500 hover:text-amber-700 text-xs font-semibold px-2 py-1 hover:bg-amber-100 rounded transition-colors">Dismiss</button>
+      </div>
+
+      <!-- KPI GRID -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <!-- Stat Item 1 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-sm font-bold">📞</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Total Calls</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">1,842</p>
+          <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 12.4% vs last week
+          </p>
+        </div>
+        <!-- Stat Item 2 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-bold">📲</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Answered</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">1,620</p>
+          <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 87.9% Ans. rate
+          </p>
+        </div>
+        <!-- Stat Item 3 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-sm font-bold">⏱️</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Avg. Duration</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">02:45</p>
+          <p class="text-[10px] text-rose-500 font-semibold flex items-center gap-0.5">
+            <span>↓</span> -12s vs last week
+          </p>
+        </div>
+        <!-- Stat Item 4 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold">👤</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Unique Leads</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">914</p>
+          <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 4.8% Active growth
+          </p>
+        </div>
+        <!-- Stat Item 5 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">🚩</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Issues Flagged</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">87</p>
+          <p class="text-[10px] text-rose-500 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 8.2% Flag rate
+          </p>
+        </div>
+        <!-- Stat Item 6 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-red-50 text-rose-600 flex items-center justify-center text-sm font-bold">₹</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Est. AI Cost</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">₹1,424.50</p>
+          <p class="text-[10px] text-slate-500 font-semibold">
+            Avg. ₹0.77 / call
+          </p>
+        </div>
+        <!-- Stat Item 7 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-sm font-bold">💬</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Tokens (LLM)</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">1.22M</p>
+          <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 18.2% Context density
+          </p>
+        </div>
+        <!-- Stat Item 8 -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-8 h-8 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center text-sm font-bold">⏱️</div>
+          <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1">Minutes Used</p>
+          <p class="text-xl font-extrabold text-slate-900 leading-tight">4,455</p>
+          <p class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+            <span>↑</span> 9.6% Usage load
+          </p>
+        </div>
+      </div>
+
+      <!-- MIDDLE ROW: CALL OUTCOMES | CALLS OVER TIME | TOP ISSUE CATEGORIES -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Call Outcomes & Customers List -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800 text-sm">Call Outcomes / Leads</h2>
+              <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">Active Pipeline</span>
+            </div>
+            <div class="relative h-44 flex items-center justify-center">
+              <canvas id="outcomesChart"></canvas>
+            </div>
+            
+            <div class="space-y-2 mt-4">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded bg-indigo-500"></span>
+                  <span class="text-slate-600 font-medium">Clients (Answered & Converted)</span>
+                </div>
+                <span class="text-slate-800 font-bold">542 (29.4%)</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded bg-slate-200"></span>
+                  <span class="text-slate-600 font-medium">Other Active Leads</span>
+                </div>
+                <span class="text-slate-800 font-semibold">1,300 (70.6%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Lead Section -->
+          <div class="mt-6 pt-4 border-t border-slate-100">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-slate-700">Top Converted Clients (5)</span>
+              <span class="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-medium">Stage: Client</span>
+            </div>
+            <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">Shree Medical Store</p>
+                  <p class="text-[10px] text-slate-400 truncate">Maharashtra, IN</p>
+                </div>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">₹12,500</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">Gupta Pharma</p>
+                  <p class="text-[10px] text-slate-400 truncate">Delhi, IN</p>
+                </div>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">₹8,200</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">Apex Pharmacy</p>
+                  <p class="text-[10px] text-slate-400 truncate">Karnataka, IN</p>
+                </div>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">₹15,400</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">Metro Chemists</p>
+                  <p class="text-[10px] text-slate-400 truncate">Gujarat, IN</p>
+                </div>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">₹9,800</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-800 truncate">City Healthcare</p>
+                  <p class="text-[10px] text-slate-400 truncate">West Bengal, IN</p>
+                </div>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">₹22,100</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calls Over Time Area Chart -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-slate-800 text-sm">Calls Over Time (Last 7 Days)</h2>
+            <select class="text-[10px] font-semibold border border-slate-200 rounded-lg px-2.5 py-1 text-slate-600 bg-white shadow-sm focus:outline-none">
+              <option>Daily Trend</option>
+              <option>Hourly Trend</option>
+            </select>
+          </div>
+          <div class="h-80 relative flex items-center justify-center">
+            <canvas id="callsOverTimeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Issue Categories Progress Bars -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800 text-sm">Top AI Flagged Issues</h2>
+              <span class="text-xs text-rose-600 font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-ping"></span>
+                Action Required
+              </span>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                  <span class="text-slate-700 flex items-center gap-1.5">🏷️ Price Discrepancies</span>
+                  <span class="text-slate-500">42% (37 flags)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                  <div class="h-2 rounded-full bg-rose-500" style="width: 42%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                  <span class="text-slate-700 flex items-center gap-1.5">🚚 Distributor Delivery Delay</span>
+                  <span class="text-slate-500">28% (24 flags)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                  <div class="h-2 rounded-full bg-orange-400" style="width: 28%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                  <span class="text-slate-700 flex items-center gap-1.5">📦 Out of Stock / Damaged Items</span>
+                  <span class="text-slate-500">18% (16 flags)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                  <div class="h-2 rounded-full bg-amber-400" style="width: 18%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                  <span class="text-slate-700 flex items-center gap-1.5">📋 Incorrect Scheme Offermatch</span>
+                  <span class="text-slate-500">12% (10 flags)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                  <div class="h-2 rounded-full bg-indigo-500" style="width: 12%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Auto-prioritization via AI summaries is enabled.</span>
+            <a href="aialerts.html" class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline">Manage Flags &rarr;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: DISTRIBUTOR PERFORMANCE | ISSUES BY REGION | LANGUAGE | RETRY -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Distributor Performance -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-slate-800 text-sm">Distributor Performance</h2>
+              <span class="text-[10px] text-slate-400 font-medium">Issue Rate</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left" id="distributorTable">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-100">
+                    <th class="pb-2 font-semibold">Distributor</th>
+                    <th class="pb-2 font-semibold">Calls</th>
+                    <th class="pb-2 font-semibold">Issues</th>
+                    <th class="pb-2 font-semibold text-right">Rate</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2.5 font-medium text-slate-700">Vardhaman Pharma</td>
+                    <td class="py-2.5 text-slate-600">142</td>
+                    <td class="py-2.5 text-slate-600">12</td>
+                    <td class="py-2.5 text-right font-bold text-emerald-600">8.4%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2.5 font-medium text-slate-700">Mahaveer Distrib.</td>
+                    <td class="py-2.5 text-slate-600">210</td>
+                    <td class="py-2.5 text-slate-600">34</td>
+                    <td class="py-2.5 text-right font-bold text-orange-500">16.2%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2.5 font-medium text-slate-700">Khandelwal Med.</td>
+                    <td class="py-2.5 text-slate-600">98</td>
+                    <td class="py-2.5 text-slate-600">28</td>
+                    <td class="py-2.5 text-right font-bold text-rose-500">28.5%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+            <button class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline">View All Distributors</button>
+          </div>
+        </div>
+
+        <!-- Issues by Region / State -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-slate-800 text-sm">Issues by State</h2>
+              <span class="text-[10px] text-slate-400 font-medium">Territory Rate</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left" id="stateTable">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-100">
+                    <th class="pb-2 font-semibold">State</th>
+                    <th class="pb-2 font-semibold">Calls</th>
+                    <th class="pb-2 font-semibold">Issues</th>
+                    <th class="pb-2 font-semibold text-right">Rate</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2 font-medium text-slate-700">Maharashtra</td>
+                    <td class="py-2 text-slate-600">410</td>
+                    <td class="py-2 text-slate-600">42</td>
+                    <td class="py-2 text-right font-bold text-indigo-600">10.2%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2 font-medium text-slate-700">Delhi</td>
+                    <td class="py-2 text-slate-600">320</td>
+                    <td class="py-2 text-slate-600">12</td>
+                    <td class="py-2 text-right font-bold text-emerald-600">3.7%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="py-2 font-medium text-slate-700">Karnataka</td>
+                    <td class="py-2 text-slate-600">290</td>
+                    <td class="py-2 text-slate-600">38</td>
+                    <td class="py-2 text-right font-bold text-rose-500">13.1%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+            <button class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline">View Regional Map</button>
+          </div>
+        </div>
+
+        <!-- Language Distribution Pie Chart -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-slate-800 text-sm">Language Mix</h2>
+              <span class="text-[10px] text-slate-400 font-medium">Voice Eng.</span>
+            </div>
+            <div class="relative h-32 flex items-center justify-center">
+              <canvas id="languageChart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-1 mt-4 text-[10px]">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded bg-indigo-600"></span>
+                <span class="text-slate-600">Hindi: 60%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded bg-emerald-500"></span>
+                <span class="text-slate-600">English: 25%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded bg-amber-400"></span>
+                <span class="text-slate-600">Marathi: 10%</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded bg-slate-300"></span>
+                <span class="text-slate-600">Others: 5%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retry & Follow-up Queue -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 class="font-bold text-slate-800 text-sm mb-3">Retry &amp; Follow-up Queue</h2>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <span class="text-lg bg-indigo-50 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center font-bold">🔄</span>
+                <div>
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Calls Requiring Retry</p>
+                  <p class="text-xs font-bold text-slate-800">42 Pending Retries</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-lg bg-purple-50 text-purple-600 w-8 h-8 rounded-full flex items-center justify-center font-bold">⏳</span>
+                <div>
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Active Retry Queue</p>
+                  <p class="text-xs font-bold text-slate-800">18 Dialing Now</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-lg bg-orange-50 text-orange-600 w-8 h-8 rounded-full flex items-center justify-center font-bold">📊</span>
+                <div>
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Avg. Retry Limit</p>
+                  <p class="text-xs font-bold text-slate-800">3 Maximum Attempts</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-lg bg-emerald-50 text-emerald-600 w-8 h-8 rounded-full flex items-center justify-center font-bold">⏰</span>
+                <div>
+                  <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Next Scheduled Sweep</p>
+                  <p class="text-xs font-bold text-slate-800">In 12 mins (Auto)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+            <button class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline">Force Manual Dial Sweep</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 4: USAGE MONITORING | WHATSAPP ESCALATIONS | RECENT LIVE ACTIVITY -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Usage Monitoring Progress Cards -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm">
+          <h2 class="font-bold text-slate-800 text-sm mb-4">AI Usage &amp; API Budgets</h2>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-600">⏱️ Minutes</span>
+                <span class="text-slate-900">4,455 / 10k</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2">
+                <div class="h-2 rounded-full bg-indigo-500" style="width: 44.5%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">44.5% Used</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-600">💬 LLM Tokens</span>
+                <span class="text-slate-900">1.2M / 5.0M</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2">
+                <div class="h-2 rounded-full bg-purple-500" style="width: 24%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">24.0% Used</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-600">🔊 TTS Chars</span>
+                <span class="text-slate-900">8.4M / 20.0M</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2">
+                <div class="h-2 rounded-full bg-teal-500" style="width: 42%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">42.0% Used</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                <span class="text-slate-600">₹ Monthly Cost</span>
+                <span class="text-slate-900">₹1.4k / ₹5.0k</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2">
+                <div class="h-2 rounded-full bg-rose-500" style="width: 28%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">28.5% Budget</p>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Bill Cycle Resets in 12 days</span>
+            <button class="text-indigo-600 font-semibold hover:underline">Upgrade Limit</button>
+          </div>
+        </div>
+
+        <!-- WhatsApp Escalations -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">💬</span>
+              <h2 class="font-bold text-slate-800 text-sm">WhatsApp Escalations</h2>
+            </div>
+            
+            <div class="space-y-3">
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-50">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="text-emerald-500">📤</span>
+                  <span class="text-slate-600 font-medium">Escalated to WhatsApp</span>
+                </div>
+                <span class="text-xs font-bold text-slate-800">42 Cases</span>
+              </div>
+              <div class="flex items-center justify-between py-1.5 border-b border-slate-50">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="text-blue-500">📥</span>
+                  <span class="text-slate-600 font-medium">Client Replies Received</span>
+                </div>
+                <span class="text-xs font-bold text-slate-800">31 Replies</span>
+              </div>
+              <div class="flex items-center justify-between py-1.5">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="text-amber-500">⏳</span>
+                  <span class="text-slate-600 font-medium">Awaiting Reply / Pending</span>
+                </div>
+                <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">11 Pending</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+            <span class="text-[10px] text-slate-400">Response Rate: 73.8%</span>
+            <button class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline">Manage Templates</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Recent Live Activity Feed -->
+        <div class="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                Recent Live Activity
+                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              </h2>
+              <span class="text-[10px] text-slate-400">Auto-updating</span>
+            </div>
+
+            <!-- Activity List (Updates via JS interval) -->
+            <div id="liveActivityList" class="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+              <div class="flex items-center justify-between text-xs py-1 border-b border-slate-50">
+                <span class="text-slate-400 font-mono w-14 flex-shrink-0">20:46:12</span>
+                <span class="text-slate-600 flex-1 mx-2 truncate font-medium">Call #8912 Converted: Shree Medical</span>
+                <span class="font-bold text-emerald-600 flex-shrink-0">CLIENT</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1 border-b border-slate-50">
+                <span class="text-slate-400 font-mono w-14 flex-shrink-0">20:45:05</span>
+                <span class="text-slate-600 flex-1 mx-2 truncate">AI Call Answered: Gupta Pharma</span>
+                <span class="font-bold text-indigo-600 flex-shrink-0">ANSWERED</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1 border-b border-slate-50">
+                <span class="text-slate-400 font-mono w-14 flex-shrink-0">20:42:30</span>
+                <span class="text-slate-600 flex-1 mx-2 truncate">Price Flag Raised: Apex Pharmacy</span>
+                <span class="font-bold text-rose-500 flex-shrink-0">FLAGGED</span>
+              </div>
+              <div class="flex items-center justify-between text-xs py-1">
+                <span class="text-slate-400 font-mono w-14 flex-shrink-0">20:39:18</span>
+                <span class="text-slate-600 flex-1 mx-2 truncate">WhatsApp Escalated: City Healthcare</span>
+                <span class="font-semibold text-amber-500 flex-shrink-0">ESCALATED</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span class="text-slate-400" id="activitySimText">Simulating live calling events...</span>
+            <button onclick="simulateEvent()" class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline">Trigger Event</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between mt-auto text-xs text-slate-400 font-medium">
+      <span>All times are in Asia/Kolkata (IST)</span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block pulse-status"></span>
+        <span>Auto-syncing simulation logs</span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // ── CHART 1: Call Outcomes Doughnut Chart ──
+    const outcomesCtx = document.getElementById('outcomesChart').getContext('2d');
+    new Chart(outcomesCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Clients (Converted)', 'Other Active Leads'],
+        datasets: [{
+          data: [542, 1300],
+          backgroundColor: ['#6366f1', '#e2e8f0'],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.label || '';
+                let value = context.raw || 0;
+                let total = 1842;
+                let percentage = ((value / total) * 100).toFixed(1) + '%';
+                return label + ': ' + value + ' (' + percentage + ')';
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // ── CHART 2: Calls Over Time Area Chart ──
+    const callsCtx = document.getElementById('callsOverTimeChart').getContext('2d');
+    const gradient = callsCtx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+    gradient.addColorStop(1, 'rgba(99, 102, 241, 0.00)');
+
+    new Chart(callsCtx, {
+      type: 'line',
+      data: {
+        labels: ['May 21', 'May 22', 'May 23', 'May 24', 'May 25', 'May 26', 'May 27'],
+        datasets: [{
+          label: 'Calls Answered',
+          data: [180, 210, 195, 245, 220, 275, 295],
+          borderColor: '#6366f1',
+          borderWidth: 3,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.35,
+          pointBackgroundColor: '#6366f1',
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              color: '#94a3b8',
+              font: {
+                family: 'Outfit',
+                size: 11
+              }
+            },
+            border: {
+              dash: [4, 4]
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: '#94a3b8',
+              font: {
+                family: 'Outfit',
+                size: 11
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+
+    // ── CHART 3: Language Mix Pie Chart ──
+    const langCtx = document.getElementById('languageChart').getContext('2d');
+    new Chart(langCtx, {
+      type: 'pie',
+      data: {
+        labels: ['Hindi', 'English', 'Marathi', 'Others'],
+        datasets: [{
+          data: [60, 25, 10, 5],
+          backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#cbd5e1'],
+          borderWidth: 1.5,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+
+    // ── DYNAMIC LIVE ACTIVITY SIMULATION ──
+    const stores = [
+      'Royal Chemist', 'Balaji Medicine', 'Sai Krupa Remedies', 
+      'Pioneer Wellness', 'Janata Medicos', 'Saraswati Pharmacy', 
+      'Medicare Point', 'Metro Healthways', 'Wellness First'
+    ];
+
+    const actions = [
+      { text: 'Call Answered by AI Rep', status: 'ANSWERED', color: 'text-indigo-600' },
+      { text: 'Call Converted to Client', status: 'CLIENT', color: 'text-emerald-600' },
+      { text: 'Price Flag Raised', status: 'FLAGGED', color: 'text-rose-500' },
+      { text: 'WhatsApp Escalated', status: 'ESCALATED', color: 'text-amber-500' },
+      { text: 'Call Scheduled Retry', status: 'RETRY', color: 'text-blue-500' }
+    ];
+
+    function getFormattedTime() {
+      const now = new Date();
+      const hrs = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const secs = String(now.getSeconds()).padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
+    }
+
+    function simulateEvent() {
+      const list = document.getElementById('liveActivityList');
+      const randomStore = stores[Math.floor(Math.random() * stores.length)];
+      const randomAction = actions[Math.floor(Math.random() * actions.length)];
+      const time = getFormattedTime();
+      const callNum = Math.floor(Math.random() * 2000) + 8000;
+
+      const newRow = document.createElement('div');
+      newRow.className = 'flex items-center justify-between text-xs py-1 border-b border-slate-50 opacity-0 transition-opacity duration-500';
+      newRow.innerHTML = `
+        <span class="text-slate-400 font-mono w-14 flex-shrink-0">${time}</span>
+        <span class="text-slate-600 flex-1 mx-2 truncate font-medium">Call #${callNum} ${randomAction.text}: ${randomStore}</span>
+        <span class="font-bold ${randomAction.color} flex-shrink-0">${randomAction.status}</span>
+      `;
+
+      // Insert at the top of list
+      list.insertBefore(newRow, list.firstChild);
+      setTimeout(() => {
+        newRow.classList.remove('opacity-0');
+      }, 50);
+
+      // Maintain max 6 rows
+      if (list.children.length > 6) {
+        list.removeChild(list.lastChild);
+      }
+
+      // Flash status text momentarily
+      const infoText = document.getElementById('activitySimText');
+      infoText.innerText = `Simulated call activity at ${time}`;
+      infoText.classList.add('text-indigo-600', 'font-medium');
+      setTimeout(() => {
+        infoText.innerText = 'Simulating live calling events...';
+        infoText.classList.remove('text-indigo-600', 'font-medium');
+      }, 2500);
+    }
+
+    // Auto trigger activity every 6 seconds
+    setInterval(simulateEvent, 6000);
+
+    // ── SEARCH FILTER FOR BOTH TABLES ──
+    function filterTables() {
+      const input = document.getElementById('dashboardSearch').value.toLowerCase();
+      
+      // Filter Distributor Table
+      const distTable = document.getElementById('distributorTable');
+      const distRows = distTable.getElementsByTagName('tr');
+      for (let i = 1; i < distRows.length; i++) {
+        const text = distRows[i].innerText.toLowerCase();
+        distRows[i].style.display = text.includes(input) ? '' : 'none';
+      }
+
+      // Filter State Table
+      const stateTable = document.getElementById('stateTable');
+      const stateRows = stateTable.getElementsByTagName('tr');
+      for (let i = 1; i < stateRows.length; i++) {
+        const text = stateRows[i].innerText.toLowerCase();
+        stateRows[i].style.display = text.includes(input) ? '' : 'none';
+      }
+    }
+  </script>
+</body>
+</html>
