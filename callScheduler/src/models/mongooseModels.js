@@ -18,6 +18,9 @@ const LeadSchema = new Schema(
       default: "pending",
     },
     totalAttempts: { type: Number, default: 0 },
+    crmLabelIds: { type: [Number], default: [] },
+    crmLabelNames: { type: [String], default: [] },
+    crmLeadStatusId: { type: Number, default: null },
 
     // ── NEW ──────────────────────────────────────────────────────────────────
     // Override per-lead instead of hardcoding 3 everywhere in logic
@@ -211,6 +214,9 @@ const CallHistorySchema = new Schema(
     contextHistory: { type: Schema.Types.Mixed, default: null },
     agentLanguage: { type: String, default: null },
     customerName: { type: String, default: null },
+    crmLabelIds: { type: [Number], default: [] },
+    crmLabelNames: { type: [String], default: [] },
+    crmLeadStatusId: { type: Number, default: null },
 
     // ── NEW ──────────────────────────────────────────────────────────────────
     // Which retry number is this? (1 = first call, 2 = first retry, 3 = last)

@@ -96,21 +96,21 @@ class AgentTools:
             reason: Why the transfer is needed.
         """
         logger.info(f"[AgentTools] transfer_to_human (Cold Transfer) triggered. Reason: '{reason}'")
-        
+        logger.info(f"self object innvocationo view : {self}")
         token = os.getenv("VIDEOSDK_AUTH_TOKEN", "")
-        transfer_to = os.getenv("CALL_TRANSFER_TO", "+916351906090") 
+        transfer_to = "+916351906090"
         
         # Adding some safety logs in case token is missing
         if not token:
             logger.warning("[AgentTools] VIDEOSDK_AUTH_TOKEN is missing or empty!")
             
         try:
-            result = await self.session.call_transfer(token, transfer_to)
+            result = await self.session.call_transfer(transfer_to)
             # User specifically requested logging the exact response:
             if hasattr(result, '__dict__'):
-                logger.info(f"[AgentTools] call_transfer execution result: {vars(result)}")
+                logger.info(f"[AgentTools] call_transfer execution result: {vars(result)} {result}")
             else:
-                logger.info(f"[AgentTools] call_transfer execution result: {result}")
+                logger.info(f"[AgentTools] call_transfer execution result: {result} {result}")
                 
             return "Transferring you now. I will disconnect from my end."
         except Exception as e:
@@ -225,6 +225,42 @@ class AgentTools:
         }
 
     # ══════════════════════════════════════════
+    #  STEP 4B — GENERAL KB SEARCH
+    # ══════════════════════════════════════════
+
+    @function_tool
+    async def search_knowledge_base(self, query: str) -> dict:
+        """Call this when the customer asks a question not clearly covered by search_product_info,
+        search_pain_solution, or any other step-specific tool.
+        Searches across ALL phases of the knowledge base — product, FAQ, company background,
+        industries served, billing customization, multi-user setup, export, and meta rules.
+        Use as a general fallback before answering from memory.
+
+        Triggers include:
+        - FAQ questions: 'kya data export kar sakte hain', 'regional language billing supported hai',
+          'kitne staff ek saath login kar sakte hain', 'low internet pe kaam karta hai'.
+        - Company background: 'company kab se hai', 'kaun banaya', 'Surat mein hai', 'WhiteCore kya hai'.
+        - Industry fit questions: 'kya furniture rental ke liye bhi kaam karta hai', 'event rental support hota hai'.
+        - Anything else the customer asks that requires a factual KB answer.
+
+        query: The customer's question in their own words.
+        Example: 'kya data download kar sakte hain', 'kitne saal se chal raha hai Rentopus',
+        'ek se zyada log use kar sakte hain', 'bill Hindi mein bana sakte hain'.
+        """
+        logger.info(f"[AgentTools] search_knowledge_base triggered. Query: '{query}'")
+        data = _search(query, phase=None, top_k=2)
+        return {
+            "data": data,
+            "step": "kb_search",
+            "query_received": query,
+            "instruction": (
+                "Answer from KB data only — never from memory. "
+                "Keep response concise and confident. 2-3 lines. "
+                "Reconnect to the conversation naturally after answering."
+            ),
+        }
+
+    # ══════════════════════════════════════════
     #  STEP 5 — OBJECTION HANDLING
     # ══════════════════════════════════════════
 
@@ -312,12 +348,79 @@ class AgentTools:
         """
         logger.info(
             f"[AgentTools] send_whatsapp_demo triggered. "
-            f"Phone: '{phone_number}', Name: '{customer_name}'"
+            f"Phone input: '{phone_number}', Name input: '{customer_name}'"
         )
+
+        # 1. Resolve customer name and phone number
+        name = customer_name or getattr(self, "customer_name", "") or "Customer"
+        raw_phone = phone_number or getattr(self, "phone", "")
+        
+        # 2. Normalize phone to 10-digit number
+        clean_phone = "".join(c for c in raw_phone if c.isdigit())
+        if len(clean_phone) > 10 and (clean_phone.startswith("91") or clean_phone.startswith("0")):
+            clean_phone = clean_phone[-10:]
+            
+        logger.info(f"[AgentTools] Normalizing phone for WhatsApp -> Name: '{name}', Phone: '{clean_phone}'")
+
+        # 3. Load token from environment or use default fallback
+        token = os.getenv("OMINIFLOW_WHATSAPP_TOKEN", "8uBG4cGIKBaAVfZsbQSEUkORq1iEq385o5tAhTqV4a623127")
+
+        # 4. Construct payload
+        payload = {
+            "token": token,
+            "phone": clean_phone,
+            "template_name": "call_summary_followup_customer",
+            "template_language": "en_US",
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": name
+                        },
+                        {
+                            "type": "text",
+                            "text": "*Please share your brand details for trial setup.*"
+                        }
+                    ]
+                }
+            ]
+        }
+
+        # 5. Call API asynchronously via urllib inside thread pool
+        import urllib.request
+        import urllib.error
+
+        url = "https://whatsapp.ominiflow.com/api/wpbox/sendtemplatemessage"
+
+        def do_request():
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    res_data = response.read().decode("utf-8")
+                    logger.info(f"[AgentTools] Ominiflow API response: {res_data}")
+                    return json.loads(res_data)
+            except urllib.error.HTTPError as he:
+                err_content = he.read().decode("utf-8")
+                logger.error(f"[AgentTools] Ominiflow HTTPError {he.code}: {err_content}")
+                return {"error": f"HTTPError {he.code}", "details": err_content}
+            except Exception as ex:
+                logger.error(f"[AgentTools] Ominiflow Request failed: {ex}")
+                return {"error": str(ex)}
+
+        api_result = await asyncio.to_thread(do_request)
+
         return {
             "status": "demo_sent",
-            "phone_number": phone_number,
-            "customer_name": customer_name,
+            "phone_number": clean_phone,
+            "customer_name": name,
+            "api_result": api_result,
             "next_action": (
                 "Continue light discovery — ask: "
                 "'By the way, how are you currently managing bookings?'"

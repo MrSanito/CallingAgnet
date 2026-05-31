@@ -1,3 +1,4 @@
-videosdk-agents
-videosdk-plugins-google
+
+videosdk-agents @ git+https://github.com/videosdk-live/agents.git@fix/call-transfer-drop-token-arg#subdirectory=videosdk-agents
+videosdk-plugins-google @ git+https://github.com/videosdk-live/agents.git@fix/call-transfer-drop-token-arg#subdirectory=videosdk-plugins/videosdk-plugins-google
 python-dotenv

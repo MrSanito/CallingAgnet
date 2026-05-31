@@ -165,7 +165,7 @@ class MyVoiceAgent(Agent, AgentTools):
             logger.info("=" * 50)
 
             # Call the webhook API to submit the transcript
-            webhook_url = "https://d2f5-2409-40c1-400e-56c2-bdaf-a712-dbf7-24b7.ngrok-free.app/api/v1/webhooks/transcript"
+            webhook_url = "https://c5aa-2409-40c1-411a-5676-748a-5ee8-7b92-9a52.ngrok-free.app/api/v1/webhooks/transcript"
             logger.info(f"[SESSION USAGE] {self._total_usage}")
             logger.info(f"[SESSION TURNS] {len(self._per_turn_usages)} turns tracked")
             payload = {
@@ -273,7 +273,7 @@ async def start_session(context: JobContext):
         # Notify backend that call was not answered
         import json
         import urllib.request
-        webhook_url = "https://d2f5-2409-40c1-400e-56c2-bdaf-a712-dbf7-24b7.ngrok-free.app/api/v1/webhooks/transcript"
+        webhook_url = "https://c5aa-2409-40c1-411a-5676-748a-5ee8-7b92-9a52.ngrok-free.app/api/v1/webhooks/transcript"
         no_answer_payload = {
             "serviceRoomId": room_id,
             "phone": phone,

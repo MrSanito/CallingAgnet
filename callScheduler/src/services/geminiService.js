@@ -28,7 +28,33 @@ async function parseTranscript(transcript, clientData) {
       : JSON.stringify(transcript, null, 2);
 
   const prompt = `
-You are an AI assistant for a real estate CRM. Analyze the following sales call transcript and return a structured JSON resolution.
+You are an AI sales assistant for Rentopus (a rental software company). Analyze the following sales call transcript and return a structured JSON resolution including CRM label IDs and lead status.
+
+CRM LABELS LIST:
+- 3: Stop Responding (Customer asked to not call, was rude, or wants to be removed)
+- 4: Busy (Customer said they are busy right now)
+- 5: Interested (Customer showed interest in the software)
+- 6: Doesn't want software (Customer explicitly declined, not interested)
+- 7: Price High (Objection about pricing being too high)
+- 8: Already using Software (Customer is already using another rental software)
+- 9: Doing rental business (Customer is active in rental business)
+- 10: Not doing rental business (Customer is not in the rental business)
+- 14: In Discussion (Detailed discussion happened, explaining features)
+- 17: Staff Not accepting (Staff is resistant to using software)
+- 20: Need to create Trail account (Customer requested a trial/test account)
+- 24: Purchased Other software (Customer already bought competing software)
+- 26: Plan to do Rental business (Planning to start rental business in future)
+- 27: Want to start in session (Wants to start using software immediately)
+- 30: Readyness (Analyzing their readiness level to adopt software)
+- 31: Want to talk to human agent (Requested cold transfer or call back from human)
+
+CRM LEAD STATUS MAPPING (LeadStatusId):
+Choose the single best matching LeadStatusId integer for the lead status based on the call:
+- 5: Interested (Resolution is interested, trial_setup, or deal_closed)
+- 14: In Discussion (Resolution is follow_up_needed, detailed talk)
+- 4: Busy (Resolution is callback_requested, busy)
+- 3: Stop Responding (Resolution is not_interested, stop calling)
+- 6: Doesn't want software (Resolution is not_interested, wrong number)
 
 CLIENT CONTEXT:
 - Name: ${clientData.clientName}
@@ -44,11 +70,15 @@ Return ONLY a valid JSON object with this exact schema (no markdown, no extra te
   "sentiment": "<one of: positive | neutral | negative>",
   "summary": "<2-3 sentence summary of what happened on the call>",
   "nextAction": "<clear description of the recommended next action for the sales agent>",
-  "followUpDelayMinutes": <integer: suggested delay in minutes before next call. Use 1440 for next day, 2880 for 2 days, 60 for 1 hour, etc.>,
+  "followUpDelayMinutes": <integer or null: suggested delay in minutes before the next call. If the customer requested/specified a callback or follow-up at a specific time/day (including Hindi/Hinglish terms like 'kal' = 1440 minutes, 'parso' = 2880 minutes, 'sham ko' = calculate minutes to evening today/around 300 minutes, or 'busy hoon baad mein' = 120 minutes), calculate the exact minutes from now. If the customer did not specify any callback or follow-up time, or is not interested, set this to null or 0.>,
+  "demoSent": <boolean: set to true if the customer requested details/demo on WhatsApp, or if the agent sent/promised to send a demo link/details on WhatsApp during the call, otherwise false>,
   "keyInsights": ["<insight 1>", "<insight 2>"],
   "urgency": "<one of: high | medium | low>",
   "budgetMentioned": "<budget range if mentioned, else null>",
-  "locationPreference": "<location if mentioned, else null>"
+  "locationPreference": "<location if mentioned, else null>",
+  "crmLabelIds": [<array of integers from CRM LABELS LIST that match this customer/call>],
+  "crmLabelNames": ["<array of matching label name strings (e.g. 'Doing rental business', 'Interested')>"],
+  "crmLeadStatusId": <integer from CRM LEAD STATUS MAPPING that best fits this call>
 }
 `.trim();
 

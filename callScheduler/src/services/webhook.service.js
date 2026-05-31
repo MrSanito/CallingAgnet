@@ -4,6 +4,7 @@ import { parseTranscript } from "./geminiService.js";
 import { fetchMergeRecordingDetails } from "./videoSdkService.js";
 import { callQueue } from "../queues/callQueue.js";
 import * as mm from "music-metadata";
+import { updateLeadStatusAndLabels, addFollowUpWithAudio } from "./crmService.js";
 
 function normalizePhoneNumber(phone) {
   if (!phone) return "";
@@ -90,10 +91,15 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
   // ── Early exit: No Answer (recipient didn't pick up) ──
   if (noAnswer) {
     console.log(`[Webhook Service] 📵 Call not answered for room: ${finalRoomId} | reason: ${reason}`);
-    callHistory.status = "no_answer";
+    // Preserve status if already set by webhooks (e.g. missed, rejected)
+    if (callHistory.status === "active" || callHistory.status === "pending") {
+      callHistory.status = "no_answer";
+    }
     callHistory.endedAt = new Date();
     callHistory.resolution = "no_answer";
-    callHistory.hangupCause = "no_answer";
+    if (!callHistory.hangupCause) {
+      callHistory.hangupCause = "no_answer";
+    }
     if (agentLanguage) callHistory.agentLanguage = agentLanguage;
     if (customerName)  callHistory.customerName  = customerName;
 
@@ -217,7 +223,8 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
     sentiment: "neutral",
     summary: "No summary generated.",
     nextAction: "None",
-    followUpDelayMinutes: 120,
+    followUpDelayMinutes: null,
+    demoSent: false,
   };
 
   if (transcript) {
@@ -235,13 +242,14 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
   }
 
   // 3. Update Call History record
-  // Don't overwrite terminal failure statuses — rejected/missed calls should stay that way
+  // Don't overwrite status — call status is managed strictly by answered/missed/transferred webhooks.
   const terminalFailureStatuses = ["rejected", "missed", "no_answer", "transfer-failed"];
   if (!terminalFailureStatuses.includes(callHistory.status)) {
-    callHistory.status = "completed";
-    callHistory.hangupCause = "normal_clearing";
+    if (!callHistory.hangupCause) {
+      callHistory.hangupCause = "normal_clearing";
+    }
   } else {
-    console.log(`[Webhook Service] Preserving existing status "${callHistory.status}" (not overwriting with "completed")`);
+    console.log(`[Webhook Service] Preserving existing status "${callHistory.status}"`);
   }
   callHistory.endedAt = new Date();
   callHistory.sentiment = resolution.sentiment;
@@ -272,6 +280,20 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
   if (callHistory.startedAt) {
     callHistory.duration = Math.round((callHistory.endedAt.getTime() - callHistory.startedAt.getTime()) / 1000);
   }
+
+  // Save CRM fields to call history and lead locally in DB
+  callHistory.crmLabelIds = resolution.crmLabelIds || [];
+  callHistory.crmLabelNames = resolution.crmLabelNames || [];
+  callHistory.crmLeadStatusId = resolution.crmLeadStatusId || null;
+
+  if (lead) {
+    lead.crmLabelIds = resolution.crmLabelIds || [];
+    lead.crmLabelNames = resolution.crmLabelNames || [];
+    lead.crmLeadStatusId = resolution.crmLeadStatusId || null;
+    await lead.save();
+    console.log(`[Webhook Service] Saved CRM labels and status to Lead ${lead._id} in DB: labels=${JSON.stringify(lead.crmLabelIds)} | statusId=${lead.crmLeadStatusId}`);
+  }
+
   await callHistory.save();
 
   // 4. Update Lead Document status
@@ -297,14 +319,31 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
     await lead.save();
     console.log(`[Webhook Service] Updated Lead ${lead._id} to status: ${lead.status}`);
 
-    // 5. Re-Queue Logic — only for completed calls that aren't terminal
-    const isTerminal = [...terminalCompletedResolutions, ...terminalFailedResolutions].includes(resolution.resolution);
+    // 5. Re-Queue Logic based on Gemini analysis
     const attemptCount = callHistory.attemptCount;
     const maxAttempts = lead.maxAttempts || 3;
 
-    if (!isTerminal && attemptCount < maxAttempts) {
-      const DELAY_MS = 2 * 60 * 60 * 1000; 
-      nextScheduledAt = new Date(Date.now() + DELAY_MS);
+    const demoSent = resolution.demoSent === true;
+    const followUpDelayMinutes = resolution.followUpDelayMinutes;
+
+    let shouldQueue = false;
+    let delayMs = 0;
+
+    if (attemptCount < maxAttempts) {
+      if (followUpDelayMinutes && followUpDelayMinutes > 0) {
+        // Customer explicitly requested or agreed to a callback (e.g. kal, parso, or busy call back in X hours)
+        shouldQueue = true;
+        delayMs = followUpDelayMinutes * 60 * 1000;
+        console.log(`[Webhook Service] 📅 Callback specified by customer. Scheduling call in ${followUpDelayMinutes} mins.`);
+      } else {
+        // "dont call if no callback is specified"
+        shouldQueue = false;
+        console.log(`[Webhook Service] 🚫 No specific callback time specified by the customer. No automatic follow-up call scheduled.`);
+      }
+    }
+
+    if (shouldQueue) {
+      nextScheduledAt = new Date(Date.now() + delayMs);
       const nextAttempt = attemptCount + 1;
 
       const jobData = {
@@ -318,75 +357,18 @@ export async function processTranscriptWebhook({ serviceRoomId, roomId, clientNu
       };
 
       const job = await callQueue.add("initiate-call", jobData, {
-        delay: DELAY_MS,
+        delay: delayMs,
         jobId: `lead-${lead._id.toString()}-attempt-${nextAttempt}-${Date.now()}`
       });
 
       reQueued = true;
-      console.log(`[Webhook Service] 🔁 Re-queued next call (attempt #${nextAttempt}) with +2h delay | jobId=${job.id}`);
+      console.log(`[Webhook Service] 🔁 Re-queued next call (attempt #${nextAttempt}) with +${Math.round(delayMs / 60000)}m delay | jobId=${job.id}`);
     } else {
-      console.log(`[Webhook Service] No re-queue needed | isTerminal=${isTerminal} | attemptsMade=${attemptCount}`);
+      console.log(`[Webhook Service] No re-queue scheduled | demoSent=${demoSent} | followUpDelayMinutes=${followUpDelayMinutes} | attemptsMade=${attemptCount}`);
     }
   }
 
-  // 6. Sync Followup with CRM (Delayed 10s to ensure recording URL is present)
-  setTimeout(async () => {
-    try {
-      console.log(`[CRM Followup Sync] Starting delayed followup sync for callId: ${callHistory._id}`);
-      
-      const recording = await CallRecording.findOne({ callId: callHistory._id });
-      if (!recording || !recording.fileUrl) {
-        console.warn(`[CRM Followup Sync] No recording or fileUrl found for callId: ${callHistory._id}`);
-        return;
-      }
-
-      console.log(`[CRM Followup Sync] Downloading audio file from: ${recording.fileUrl}`);
-      const audioResponse = await fetch(recording.fileUrl);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to download audio recording: ${audioResponse.statusText}`);
-      }
-      const audioBuffer = await audioResponse.arrayBuffer();
-
-      const delayMinutes = resolution.followUpDelayMinutes || 120;
-      const nextFollowupDate = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString().split("T")[0];
-
-      const crmLeadId = lead.RcromId || (lead.clientOtherDetails && lead.clientOtherDetails.crmLeadId);
-      if (!crmLeadId) {
-        console.warn(`[CRM Followup Sync] No CRM Lead ID found for lead: ${lead._id}`);
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("LeadId", crmLeadId.toString());
-      formData.append("Comment", resolution.summary || "Call Completed");
-      formData.append("NextFollowup", nextFollowupDate);
-      
-      const audioBlob = new Blob([audioBuffer], { type: "audio/mpeg" });
-      formData.append("AudioFile", audioBlob, "recording.mp3");
-
-      console.log(`[CRM Followup Sync] Sending AddFolloupbyLeadId request for LeadId: ${crmLeadId}`);
-      const crmResponse = await fetch("https://rcrm-api.rentopus.in/api/external/leads/AddFolloupbyLeadId", {
-        method: "POST",
-        headers: {
-          "accept": "*/*",
-          "X-API-Key": "Q6HP0ydkWpgp2wCKa3Lnc3zAVQEPlYzbg3JRpKEqz94"
-        },
-        body: formData
-      });
-
-      const responseText = await crmResponse.text();
-      console.log(`[CRM Followup Sync] Response from CRM API: Status=${crmResponse.status} | Body=${responseText}`);
-      
-      // If CRM sync succeeded, record idempotency timestamp
-      if (crmResponse.ok) {
-        recording.pushedToRcrmAt = new Date();
-        await recording.save();
-      }
-
-    } catch (err) {
-      console.error(`[CRM Followup Sync] ❌ Error syncing followup with audio:`, err.message);
-    }
-  }, 10000);
+  // 6. CRM Sync moved to handleRecordingCompleted (when audio is ready) and handleCallStatusUpdate (for missed/transferred)
 
   return {
     callId: callHistory._id,
@@ -481,6 +463,46 @@ export async function handleRecordingCompleted(data, req) {
     console.log(`[Webhook Service] ✅ Updated Call History ${callHistory._id} duration to: ${callHistory.duration}s`);
   }
 
+  // CRM Sync on Merge Recording Completed
+  try {
+    const lead = await Lead.findById(callHistory.leadId);
+    if (lead) {
+      const crmLeadId = lead.RcromId || (lead.clientOtherDetails && lead.clientOtherDetails.crmLeadId);
+      if (crmLeadId) {
+        // Retrieve CRM labels, status, and comments from database (saved during transcript webhook)
+        const labelIds = callHistory.crmLabelIds && callHistory.crmLabelIds.length > 0
+          ? callHistory.crmLabelIds
+          : (lead.crmLabelIds && lead.crmLabelIds.length > 0 ? lead.crmLabelIds : [9, 30]); // fallback to [9, 30] Doing rental business & Readyness
+          
+        const leadStatusId = callHistory.crmLeadStatusId || lead.crmLeadStatusId || 5; // fallback to 5 (Interested)
+        const comment = callHistory.summary || "Call completed. Summary available.";
+        const nextFollowupDate = new Date(Date.now() + 120 * 60 * 1000).toISOString().split("T")[0]; // YYYY-MM-DD
+        
+        console.log(`[Webhook Service] Handing over completed call to CRM: crmLeadId=${crmLeadId} | labelIds=${JSON.stringify(labelIds)} | leadStatusId=${leadStatusId}`);
+        
+        // 1. Invoke Update Lead Label & Status
+        await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId);
+        
+        // 2. Invoke Add Followup with Audio Recording
+        if (finalFileUrl) {
+          const followupRes = await addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate, finalFileUrl);
+          if (followupRes.success) {
+            // Mark pushed to CRM
+            const recording = await CallRecording.findOne({ recordingId });
+            if (recording) {
+              recording.pushedToRcrmAt = new Date();
+              await recording.save();
+            }
+          }
+        }
+      } else {
+        console.warn(`[Webhook Service] CRM Lead ID (RcromId) not found for lead ${lead._id}. Cannot sync to CRM.`);
+      }
+    }
+  } catch (syncErr) {
+    console.error(`[Webhook Service] ❌ Failed during CRM sync on merge:`, syncErr.message);
+  }
+
   return { recordingId, callId: callHistory._id, fileUrl: finalFileUrl };
 }
 
@@ -544,6 +566,35 @@ export async function handleCallStatusUpdate(type, data, req) {
         await lead.save();
         console.log(`[Webhook Service] Lead ${lead._id} reset to 'pending' for retry (attempt ${lead.totalAttempts}/${maxAttempts})`);
       }
+
+      // CRM Sync on Call Missed/Rejected
+      try {
+        const crmLeadId = lead.RcromId || (lead.clientOtherDetails && lead.clientOtherDetails.crmLeadId);
+        if (crmLeadId) {
+          const isMissed = type === "call-missed";
+          // Missed: Label = 4 (Busy), Status = 4 (Busy)
+          // Rejected: Label = 3 (Stop Responding), Status = 3 (Stop Responding)
+          const labelIds = isMissed ? [4] : [3];
+          const leadStatusId = isMissed ? 4 : 3;
+          const comment = isMissed ? "Call missed (nobody picked up)" : "Call rejected by customer";
+          const nextFollowupDate = new Date(Date.now() + 1440 * 60 * 1000).toISOString().split("T")[0]; // YYYY-MM-DD
+
+          // Save labels and status in local database
+          lead.crmLabelIds = labelIds;
+          lead.crmLeadStatusId = leadStatusId;
+          await lead.save();
+
+          console.log(`[Webhook Service] Syncing missed/rejected call to CRM: crmLeadId=${crmLeadId} | labelIds=${JSON.stringify(labelIds)} | leadStatusId=${leadStatusId}`);
+          
+          // 1. Invoke Update Lead Label & Status
+          await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId);
+
+          // 2. Invoke Add Followup
+          await addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate, null);
+        }
+      } catch (crmErr) {
+        console.error(`[Webhook Service] ❌ Failed to sync missed/rejected call to CRM:`, crmErr.message);
+      }
     }
   } else if (type === "call-transferred") {
     callHistory.status = "transferred";
@@ -554,6 +605,29 @@ export async function handleCallStatusUpdate(type, data, req) {
     callHistory.hangupCause = "transferred";
     await callHistory.save();
     console.log(`[Webhook Service] Call History ${callHistory._id} updated to status "transferred"`);
+
+    // CRM Sync on Call Transferred
+    if (lead) {
+      try {
+        const crmLeadId = lead.RcromId || (lead.clientOtherDetails && lead.clientOtherDetails.crmLeadId);
+        if (crmLeadId) {
+          const labelIds = [31, 14]; // Want to talk to human agent (31) & In Discussion (14)
+          const leadStatusId = 14;   // In Discussion (14)
+          const comment = `Call successfully transferred to human agent: ${data.transferTo || "+916351906090"}`;
+          const nextFollowupDate = new Date(Date.now() + 120 * 60 * 1000).toISOString().split("T")[0]; // 2 hours delay
+
+          lead.crmLabelIds = labelIds;
+          lead.crmLeadStatusId = leadStatusId;
+          await lead.save();
+
+          console.log(`[Webhook Service] Syncing call-transferred to CRM: crmLeadId=${crmLeadId}`);
+          await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId);
+          await addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate, null);
+        }
+      } catch (crmErr) {
+        console.error(`[Webhook Service] ❌ Failed to sync call-transferred to CRM:`, crmErr.message);
+      }
+    }
   } else if (type === "transfer-failed") {
     callHistory.status = "transfer-failed";
     callHistory.transferTo = data.transferTo || null;
@@ -563,5 +637,28 @@ export async function handleCallStatusUpdate(type, data, req) {
     callHistory.hangupCause = "failed";
     await callHistory.save();
     console.log(`[Webhook Service] Call History ${callHistory._id} updated to status "transfer-failed"`);
+
+    // CRM Sync on Call Transfer Failed
+    if (lead) {
+      try {
+        const crmLeadId = lead.RcromId || (lead.clientOtherDetails && lead.clientOtherDetails.crmLeadId);
+        if (crmLeadId) {
+          const labelIds = [31];   // Want to talk to human agent (31)
+          const leadStatusId = 14;  // In Discussion (14)
+          const comment = "Call transfer to human agent failed";
+          const nextFollowupDate = new Date(Date.now() + 60 * 60 * 1000).toISOString().split("T")[0]; // 1 hour delay
+
+          lead.crmLabelIds = labelIds;
+          lead.crmLeadStatusId = leadStatusId;
+          await lead.save();
+
+          console.log(`[Webhook Service] Syncing transfer-failed to CRM: crmLeadId=${crmLeadId}`);
+          await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId);
+          await addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate, null);
+        }
+      } catch (crmErr) {
+        console.error(`[Webhook Service] ❌ Failed to sync transfer-failed to CRM:`, crmErr.message);
+      }
+    }
   }
 }
