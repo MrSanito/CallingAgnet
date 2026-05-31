@@ -337,3 +337,24 @@ ScheduledCallbackSchema.index({ leadId: 1, status: 1 });
 export const ScheduledCallback =
   mongoose.models.ScheduledCallback ||
   mongoose.model("ScheduledCallback", ScheduledCallbackSchema);
+
+
+// ── 7. SYSTEM LOG SCHEMA ───────────────────────────────────────────────────────
+const SystemLogSchema = new Schema(
+  {
+    level: {
+      type: String,
+      enum: ["info", "warn", "error", "debug"],
+      default: "info",
+    },
+    message: { type: String, required: true },
+    meta: { type: Schema.Types.Mixed, default: null },
+    source: { type: String, default: "system" },
+  },
+  { timestamps: true }
+);
+
+SystemLogSchema.index({ level: 1, createdAt: -1 });
+
+export const SystemLog = mongoose.models.SystemLog || mongoose.model("SystemLog", SystemLogSchema);
+

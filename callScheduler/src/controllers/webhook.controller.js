@@ -1,10 +1,13 @@
 import * as webhookService from "../services/webhook.service.js";
+import { writeLog } from "../services/logService.js";
 
 /**
  * POST /transcript
  */
 export async function handleTranscript(req, res, next) {
   try {
+    const roomId = req.body.serviceRoomId || req.body.roomId;
+    writeLog(`Transcript webhook received for room: ${roomId}`, "info", "webhook", { roomId, phone: req.body.phone });
     const result = await webhookService.processTranscriptWebhook(req.body);
     return res.status(200).json({
       success: true,
@@ -26,6 +29,9 @@ export async function handleRecording(req, res, next) {
 
     // Silently discard — no log, no processing
     if (type === "participant-left") return res.status(200).json({ success: true });
+
+    const roomId = data.meetingId || data.roomId || req.body.roomId || req.body.serviceRoomId || "?";
+    writeLog(`VideoSDK Recording/Room Event Webhook: ${type} | room: ${roomId}`, "info", "webhook", { type, roomId });
 
     console.log(`\n=================== [WEBHOOK: ${type}] ===================`);
     console.log(JSON.stringify(req.body, null, 2));
@@ -104,6 +110,8 @@ export async function handleCallAnswered(req, res, next) {
   try {
     const data = req.body.data || {};
     const type = req.body.webhookType || "call-answered";
+    const roomId = data.meetingId || data.roomId || req.body.roomId || "?";
+    writeLog(`Telephony event callback: call-answered | room: ${roomId}`, "info", "webhook", { type, roomId });
     
     console.log(`\n=================== [CALL ANSWERED WEBHOOK RECEIVED] ===================`);
     console.log(JSON.stringify(req.body, null, 2));
@@ -121,6 +129,8 @@ export async function handleCallMissed(req, res, next) {
   try {
     const data = req.body.data || {};
     const type = req.body.webhookType || "call-missed";
+    const roomId = data.meetingId || data.roomId || req.body.roomId || "?";
+    writeLog(`Telephony event callback: call-missed | room: ${roomId}`, "info", "webhook", { type, roomId });
     
     console.log(`\n=================== [CALL MISSED WEBHOOK RECEIVED] ===================`);
     console.log(JSON.stringify(req.body, null, 2));
@@ -138,6 +148,8 @@ export async function handleCallTransferred(req, res, next) {
   try {
     const data = req.body.data || {};
     const type = req.body.webhookType || "call-transferred";
+    const roomId = data.meetingId || data.roomId || req.body.roomId || "?";
+    writeLog(`Telephony event callback: call-transferred | room: ${roomId}`, "info", "webhook", { type, roomId });
     
     console.log(`\n=================== [CALL TRANSFERRED WEBHOOK RECEIVED] ===================`);
     console.log(JSON.stringify(req.body, null, 2));

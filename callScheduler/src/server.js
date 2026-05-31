@@ -2,6 +2,7 @@
 import "dotenv/config";
 import express from "express";
 import { requestLogger } from "./middleware/requestLogger.js";
+import { writeLog } from "./services/logService.js";
 import apiRouter from "./routes/index.route.js";
 import { connectDB } from "./services/mongoose.js";
 
@@ -44,6 +45,9 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/v1/TodayFollowup`);
   console.log(`   POST /api/v1/webhooks/transcript`);
   console.log(`   POST /api/v1/webhooks/recording\n`);
+
+  // Record startup log to MongoDB
+  writeLog(`HTTP server successfully started and listening on port ${PORT}`, "info", "backend", { port: PORT });
 });
 
 export default app;

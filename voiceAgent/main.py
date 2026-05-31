@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob, Options, MCPServerHTTP
 from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
+from videosdk.plugins.google.live_api import ThinkingConfig
 from dotenv import load_dotenv
 from tools import AgentTools
 
@@ -35,7 +36,7 @@ LANGUAGES = {
 DEFAULT_LANGUAGE = "hinglish"
 
 AGENT_ID        = "ag_pu4csw"
-GEMINI_MODEL       = "gemini-3.1-flash-live-preview"
+GEMINI_MODEL = "gemini-3.1-flash-live-preview"
 GEMINI_VOICE    = "Puck"          # casual, youthful — fits Hinglish/delivery context
 MAX_PROCESSES   = 10
 REPORTS_DIR     = Path("feedback_reports")
@@ -124,15 +125,17 @@ class MyVoiceAgent(Agent, AgentTools):
         )
 
     async def on_enter(self) -> None:
+
+
         await self.play_background_audio(
             override_thinking=True,
             looping=True
         )
+        greeting = self.lang_cfg["greeting"]
+        await self.session.say(greeting)
         # if self.customer_name:
         #     greeting = f"Namaste {self.customer_name} ji! Main Rentopus ki तरफ से बोल रहा हूँ — क्या आपके पास एक दो मिनट हैं?"
         # else:
-        greeting = self.lang_cfg["greeting"]
-        await self.session.say(greeting)
     
     async def on_exit(self) -> None:
         # ✅ MUST be first — remove this agent's listener to prevent ghost leak
@@ -243,8 +246,10 @@ async def start_session(context: JobContext):
         api_key=os.getenv("GOOGLE_API_KEY"),
         config=GeminiLiveConfig(
             voice=GEMINI_VOICE,
-            response_modalities=["AUDIO"]
-        )
+            response_modalities=["AUDIO"],
+            # temperature=0.4
+            
+                    )
     )
 
     pipeline = Pipeline(llm=model)
