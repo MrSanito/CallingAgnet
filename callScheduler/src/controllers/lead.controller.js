@@ -18,6 +18,9 @@ const scheduleCallSchema = z.object({
   clientOtherDetails: z.record(z.unknown()).optional().default({}),
   delayMinutes: z.number().int().min(0).optional().default(0),
   shopName: z.string().optional().default(""),
+  crmId: z.union([z.string(), z.number()]).optional(),
+  RcromId: z.union([z.string(), z.number()]).optional(),
+  crmLeadId: z.union([z.string(), z.number()]).optional(),
 });
 
 const callResolutionSchema = z.object({

@@ -63,11 +63,16 @@ function cleanLeadsList(rawLeads) {
 /**
  * Saves/updates lead and queues an immediate call
  */
-export async function processLeadAndQueueImmediate({ clientName, clientNumber, clientRequirement, clientOtherDetails, shopName, maxAttempts, priority, timezone, preferredCallWindow, tags }, isNewLeadsPath = false) {
+export async function processLeadAndQueueImmediate({ clientName, clientNumber, clientRequirement, clientOtherDetails, shopName, maxAttempts, priority, timezone, preferredCallWindow, tags, RcromId, crmId, crmLeadId }, isNewLeadsPath = false) {
   const cleanNumber = normalizePhoneNumber(clientNumber);
   const name = clientName || "Customer";
   const requirement = clientRequirement || "General Follow-up";
+  
+  const finalCrmId = RcromId || crmId || crmLeadId ? Number(RcromId || crmId || crmLeadId) : null;
   const otherDetails = clientOtherDetails || {};
+  if (finalCrmId) {
+    otherDetails.crmLeadId = finalCrmId;
+  }
   const finalShopName = shopName || (otherDetails && otherDetails.shopName) || "";
 
   // Check if lead already exists
@@ -80,6 +85,9 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
     lead.clientOtherDetails = { ...lead.clientOtherDetails, ...otherDetails };
     lead.status = "pending";
     lead.totalAttempts = 0;
+    if (finalCrmId) {
+      lead.RcromId = finalCrmId;
+    }
     
     if (maxAttempts !== undefined) lead.maxAttempts = maxAttempts;
     if (priority !== undefined) lead.priority = priority;
@@ -88,9 +96,10 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
     if (tags !== undefined) lead.tags = tags;
 
     await lead.save();
-    console.log(`[Lead Service] Re-activated existing lead: ${cleanNumber}`);
+    console.log(`[Lead Service] Re-activated existing lead: ${cleanNumber} with RcromId=${finalCrmId}`);
   } else {
     lead = new Lead({
+      RcromId: finalCrmId,
       clientName: name,
       shopName: finalShopName,
       clientNumber: cleanNumber,
@@ -105,7 +114,7 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
       tags: tags || [],
     });
     await lead.save();
-    console.log(`[Lead Service] Created new lead: ${name} (${cleanNumber})`);
+    console.log(`[Lead Service] Created new lead: ${name} (${cleanNumber}) with RcromId=${finalCrmId}`);
   }
 
   // Queue initial job with attemptNum = 1, delay = 0
