@@ -100,6 +100,7 @@ export async function triggerCall(sipCallTo, name = "Customer", company = "Rento
       return data;
     } else {
       const errorText = await response.text();
+      console.error(response);
       console.error(`[VideoSDK] ❌ Error: ${response.status} — ${errorText}`);
       return null;
     }

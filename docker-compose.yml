@@ -1,7 +1,13 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  Rentopus — Docker Compose Stack                                       ║
+# ║  Run: docker-compose up --build                                        ║
+# ║  All API keys are read from the root .env file                         ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
 services:
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
   #  REDIS — Task Queue Storage for BullMQ
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: rentopus-redis
@@ -11,9 +17,9 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
-  # ────────────────────────────────────────────────────────────────────────────
-  #  MONGODB — Database Storage for Call Scheduler
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
+  #  MONGODB — Database Storage
+  # ────────────────────────────────────────────────────────────────────────
   mongodb:
     image: mongo:7.0
     container_name: rentopus-mongodb
@@ -23,9 +29,9 @@ services:
       - mongodb_data:/data/db
     restart: unless-stopped
 
-  # ────────────────────────────────────────────────────────────────────────────
-  #  CALL SCHEDULER BACKEND — Express API Server
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
+  #  CALL SCHEDULER BACKEND — Express API Server (port 6002)
+  # ────────────────────────────────────────────────────────────────────────
   call-scheduler:
     build:
       context: ./callScheduler
@@ -33,51 +39,41 @@ services:
     container_name: rentopus-backend
     ports:
       - "6002:6002"
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
-      - REDIS_URL=redis://redis:6379
       - PORT=6002
-      # Sourced from local .env or injected environment variables
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - VIDEOSDK_AUTH_TOKEN=${VIDEOSDK_AUTH_TOKEN}
-      - VIDEOSDK_SIP_CALL_FROM=${VIDEOSDK_SIP_CALL_FROM}
-      - VIDEOSDK_ROUTING_RULE_ID=${VIDEOSDK_ROUTING_RULE_ID}
-      - MONGODB_URI=${MONGODB_URI}
-      - VIDEOSDK_WEBHOOK_URL=${VIDEOSDK_WEBHOOK_URL}
-      - RCRM_API_KEY=${RCRM_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URI=mongodb://mongodb:27017/call_scheduler
     depends_on:
       - redis
       - mongodb
     restart: unless-stopped
 
-  # ────────────────────────────────────────────────────────────────────────────
-  #  CALL SCHEDULER WORKER — Background Queue Task Worker
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
+  #  CALL SCHEDULER WORKER — Background Queue Processor
+  # ────────────────────────────────────────────────────────────────────────
   call-scheduler-worker:
     build:
       context: ./callScheduler
       dockerfile: Dockerfile
     container_name: rentopus-worker
     command: ["npm", "run", "start:worker"]
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      # Sourced from local .env or injected environment variables
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - VIDEOSDK_AUTH_TOKEN=${VIDEOSDK_AUTH_TOKEN}
-      - VIDEOSDK_SIP_CALL_FROM=${VIDEOSDK_SIP_CALL_FROM}
-      - VIDEOSDK_ROUTING_RULE_ID=${VIDEOSDK_ROUTING_RULE_ID}
-      - MONGODB_URI=${MONGODB_URI}
-      - VIDEOSDK_WEBHOOK_URL=${VIDEOSDK_WEBHOOK_URL}
-      - RCRM_API_KEY=${RCRM_API_KEY}
+      - MONGODB_URI=mongodb://mongodb:27017/call_scheduler
     depends_on:
       - redis
       - mongodb
     restart: unless-stopped
 
-  # ────────────────────────────────────────────────────────────────────────────
-  #  CALL SCHEDULER WEB — Next.js Frontend Dashboard
-  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────
+  #  CALL SCHEDULER WEB — Next.js Frontend Dashboard (port 6001)
+  # ────────────────────────────────────────────────────────────────────────
   call-scheduler-web:
     build:
       context: ./call-scheduler-web
@@ -85,11 +81,13 @@ services:
     container_name: rentopus-frontend
     ports:
       - "6001:6001"
+    env_file:
+      - ./.env
     environment:
       - NODE_ENV=production
       - PORT=6001
       - NEXT_PUBLIC_API_URL=http://localhost:6002/api/v1
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb://mongodb:27017/call_scheduler
     depends_on:
       - call-scheduler
       - mongodb

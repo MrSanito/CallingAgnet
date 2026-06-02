@@ -147,6 +147,8 @@ const worker = new Worker(
         retryReason: attemptNum > 1 ? "retry" : null, // If it's >1, we'll generically call it a retry initially
       });
       await callHistory.save();
+
+      
       console.log(`[Worker] Saved Call History attempt record: ${callHistory._id}`);
 
       // 4.5 Link VideoSDK Room back to CallHistory and mark active
@@ -155,8 +157,8 @@ const worker = new Worker(
       await sdkRoom.save();
 
       // 5. Trigger the SIP outbound call linking it to the VideoSDK Room
-      console.log(`[Worker] Triggering outbound SIP call connecting ${clientNumber} to room ${serviceRoomId}`);
-      await triggerCall(clientNumber, clientName, "Rentopus", "hinglish", serviceRoomId);
+      console.log(`[Worker] Triggering outbound SIP call connecting ${cleanNumber} to room ${serviceRoomId}`);
+      await triggerCall(cleanNumber, clientName, "Rentopus", "hinglish", serviceRoomId);
 
       // 6. Simulate Telephony Client Integration
       const result = await initiateCall(job.data);
