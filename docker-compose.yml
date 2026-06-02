@@ -84,9 +84,10 @@ services:
       dockerfile: Dockerfile
     container_name: rentopus-frontend
     ports:
-      - "6001:3000"
+      - "6001:6001"
     environment:
       - NODE_ENV=production
+      - PORT=6001
       - NEXT_PUBLIC_API_URL=http://localhost:6000/api/v1
       - MONGODB_URI=${MONGODB_URI}
     depends_on:
