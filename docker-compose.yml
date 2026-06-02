@@ -84,7 +84,7 @@ services:
       dockerfile: Dockerfile
     container_name: rentopus-frontend
     ports:
-      - "3001:3000"
+      - "6001:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://localhost:6000/api/v1
