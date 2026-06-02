@@ -43,9 +43,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 6001
 
-ENV PORT=3000
+ENV PORT=6001
 ENV HOSTNAME="0.0.0.0"
 
 # server.js is created automatically by Next.js in standalone mode
