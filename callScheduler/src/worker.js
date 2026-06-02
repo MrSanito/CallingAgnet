@@ -115,13 +115,21 @@ const worker = new Worker(
       
       const serviceRoomId = roomData.roomId;
 
-      // 3. Save the VideoSDK Room to DB
-      const sdkRoom = new VideoSdkRoom({
-        roomId: serviceRoomId,
-        customRoomId,
+      // 3. Save the VideoSDK Room to DB (upsert/find existing to handle retries gracefully)
+      let sdkRoom = await VideoSdkRoom.findOne({
+        $or: [{ roomId: serviceRoomId }, { customRoomId }]
       });
-      await sdkRoom.save();
-      console.log(`[Worker] Registered VideoSDK Room in DB: ${serviceRoomId}`);
+
+      if (!sdkRoom) {
+        sdkRoom = new VideoSdkRoom({
+          roomId: serviceRoomId,
+          customRoomId,
+        });
+        await sdkRoom.save();
+        console.log(`[Worker] Registered new VideoSDK Room in DB: ${serviceRoomId}`);
+      } else {
+        console.log(`[Worker] VideoSDK Room ${serviceRoomId} already exists in DB. Reusing it.`);
+      }
 
       // 4. Save Call Attempt (CallHistory) to DB
       const queuedAtTime = job.timestamp ? new Date(job.timestamp) : new Date();

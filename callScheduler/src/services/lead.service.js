@@ -1,16 +1,63 @@
 import { Lead, CallHistory, ScheduledCallback } from "../models/mongooseModels.js";
 import { callQueue } from "../queues/callQueue.js";
-import { parseTranscript, cleanupLeadsList } from "./geminiService.js";
+import { parseTranscript } from "./geminiService.js";
 import { updateLead, addFollowUp, fetchTodayLeads } from "./crmService.js";
 
-function normalizePhoneNumber(phone) {
-  if (!phone) return "";
-  let clean = phone.toString().trim().replace(/[\s-()]/g, "");
-  if (clean.startsWith("+")) return clean;
-  if (clean.length === 10) return "+91" + clean;
-  if (clean.length === 12 && clean.startsWith("91")) return "+" + clean;
-  if (clean.startsWith("91")) return "+" + clean;
-  return "+91" + clean;
+function normalizePhoneNumber(raw) {
+  if (!raw) return null;
+  let digits = String(raw).replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return digits;
+  return null;
+}
+
+function cleanName(raw) {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  const stripped = trimmed
+    .replace(/\s*[-–]\s*\d{10}/g, "")
+    .replace(/\s*(call|wife|husband)\s*(no\.?|number)?\s*[-–]?\s*\d*/gi, "")
+    .trim();
+  if (!stripped || ["unknown", "unkown"].includes(stripped.toLowerCase())) return "";
+  return stripped;
+}
+
+function cleanShopName(raw) {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (["unknown", "unkown", "home", ""].includes(trimmed.toLowerCase())) return "";
+  return trimmed;
+}
+
+function buildRelatedDetails(lead) {
+  const parts = [];
+  if (lead.leadLabelName) parts.push(`Labels: ${lead.leadLabelName}`);
+  if (lead.remarks?.trim()) parts.push(`Remarks: ${lead.remarks.trim()}`);
+  if (lead.comment?.trim()) {
+    const dateMatch = lead.comment.match(/\d{2}\/\w+\/\d{4}/);
+    const dateStr = dateMatch ? ` (last contact: ${dateMatch[0]})` : "";
+    parts.push(`Last comment${dateStr}: ${lead.comment.trim()}`);
+  }
+  return parts.join(" | ");
+}
+
+function cleanLeadsList(rawLeads) {
+  const seen = new Set();
+  const cleaned = [];
+  for (const lead of rawLeads) {
+    const contactNo = normalizePhoneNumber(lead.contactNo);
+    if (!contactNo || seen.has(contactNo)) continue;
+    seen.add(contactNo);
+    cleaned.push({
+      RcromId: lead.id,
+      name: cleanName(lead.name),
+      contactNo,
+      shopName: cleanShopName(lead.shopName),
+      relatedDetails: buildRelatedDetails(lead),
+    });
+  }
+  return cleaned;
 }
 
 /**
@@ -87,25 +134,19 @@ export async function processLeadAndQueueImmediate({ clientName, clientNumber, c
  * Fetches today's CRM followups and queues call jobs after 5 mins delay
  */
 export async function fetchAndScheduleTodayFollowup() {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
   const url = "https://rcrm-api.rentopus.in/api/external/leads/GetTodaysFollowupByUserId";
-  
-  console.log(`[Lead Service] Fetching today's CRM followups for date: ${today}`);
 
-  const payload = {
-    userId: 5,
-    fromDate: today,
-    toDate: today
-  };
+  console.log(`[Lead Service] Fetching today's CRM followups for date: ${today}`);
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "accept": "*/*",
       "Content-Type": "application/json",
-      "X-API-Key": "Q6HP0ydkWpgp2wCKa3Lnc3zAVQEPlYzbg3JRpKEqz94"
+      "X-API-Key": "Q6HP0ydkWpgp2wCKa3Lnc3zAVQEPlYzbg3JRpKEqz94",
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ userId: 5, fromDate: today, toDate: today }),
   });
 
   if (!response.ok) {
@@ -114,27 +155,33 @@ export async function fetchAndScheduleTodayFollowup() {
   }
 
   const responseData = await response.json();
-  
-  if (!responseData.success || !responseData.data || !responseData.data.length) {
+
+  if (!responseData.success || !responseData.data?.length) {
     console.log(`[Lead Service] No leads returned from CRM API`);
     return [];
   }
 
-  // AI Cleanup using Gemini
-  const cleanedLeads = await cleanupLeadsList(responseData.data);
-  console.log("\n=================== [CLEANED LEADS AFTER GEMINI CLEANUP] ===================");
+  const cleanedLeads = cleanLeadsList(responseData.data);
+  console.log("\n=================== [CLEANED LEADS] ===================");
   console.log(JSON.stringify(cleanedLeads, null, 2));
-  console.log("============================================================================\n");
+  console.log("========================================================\n");
 
-  // Save/Update each cleaned lead in the database, keeping call scheduling commented out
+  let scheduledCount = 0;
+  const processedNumbers = new Set();
+
   for (const rawLead of responseData.data) {
-    const cleanedLead = cleanedLeads.find(l => l.RcromId === rawLead.id);
+    const cleanedLead = cleanedLeads.find((l) => l.RcromId === rawLead.id);
     if (!cleanedLead) continue;
 
     const { name, contactNo, shopName, relatedDetails } = cleanedLead;
     if (!contactNo) continue;
 
-    const cleanNumber = normalizePhoneNumber(contactNo);
+    if (processedNumbers.has(contactNo)) {
+      console.log(`[Lead Service] Skipping duplicate lead for number: ${contactNo}`);
+      continue;
+    }
+    processedNumbers.add(contactNo);
+
     const clientName = name || "Customer";
     const finalShopName = shopName || "";
     const clientRequirement = relatedDetails || "";
@@ -150,7 +197,7 @@ export async function fetchAndScheduleTodayFollowup() {
       source: "TodayFollowup",
     };
 
-    let lead = await Lead.findOne({ clientNumber: cleanNumber });
+    let lead = await Lead.findOne({ clientNumber: contactNo });
 
     if (lead) {
       lead.RcromId = rawLead.id;
@@ -161,42 +208,48 @@ export async function fetchAndScheduleTodayFollowup() {
       lead.status = "pending";
       lead.totalAttempts = 0;
       await lead.save();
-      console.log(`[Lead Service] Updated lead in DB: ${clientName} (${cleanNumber}) with RcromId=${rawLead.id}`);
+      console.log(`[Lead Service] Updated lead: ${clientName} (${contactNo}) RcromId=${rawLead.id}`);
     } else {
       lead = new Lead({
         RcromId: rawLead.id,
         clientName,
         shopName: finalShopName,
-        clientNumber: cleanNumber,
+        clientNumber: contactNo,
         clientRequirement,
         clientOtherDetails,
         status: "pending",
         totalAttempts: 0,
       });
       await lead.save();
-      console.log(`[Lead Service] Saved new lead in DB: ${clientName} (${cleanNumber}) with RcromId=${rawLead.id}`);
+      console.log(`[Lead Service] Saved new lead: ${clientName} (${contactNo}) RcromId=${rawLead.id}`);
     }
 
-    // CALL SCHEDULING COMMENTED OUT AS REQUESTED
-    // const jobData = {
-    //   leadId: lead._id.toString(),
-    //   clientName,
-    //   shopName: finalShopName,
-    //   clientNumber: cleanNumber,
-    //   clientRequirement,
-    //   clientOtherDetails,
-    //   attemptNum: 1,
-    // };
-    //
-    // const FIVE_MINUTES_MS = 5 * 60 * 1000;
-    // const job = await callQueue.add("initiate-call", jobData, {
-    //   delay: FIVE_MINUTES_MS,
-    //   jobId: `lead-${lead._id.toString()}-attempt-1-followup-${Date.now()}`
-    // });
+    // First 3 → 1 min, next 3 → 7 min, next 3 → 13 min ...
+    const delayMinutes = 1 + Math.floor(scheduledCount / 3) * 6;
+    const delayMs = delayMinutes * 60 * 1000;
+
+    const jobData = {
+      leadId: lead._id.toString(),
+      clientName,
+      shopName: finalShopName,
+      clientNumber: contactNo,
+      clientRequirement,
+      clientOtherDetails,
+      attemptNum: 1,
+    };
+
+    const job = await callQueue.add("initiate-call", jobData, {
+      delay: delayMs,
+      jobId: `lead-${lead._id.toString()}-attempt-1-followup-${Date.now()}`,
+    });
+
+    console.log(`[Lead Service] Scheduled call for ${clientName} (${contactNo}) | delay: ${delayMinutes}min | jobId: ${job.id}`);
+    scheduledCount++;
   }
 
   return cleanedLeads;
 }
+
 
 /**
  * Schedules a single immediate or delayed call

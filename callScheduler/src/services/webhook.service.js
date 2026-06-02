@@ -565,6 +565,26 @@ export async function handleCallStatusUpdate(type, data, req) {
         lead.status = "pending";
         await lead.save();
         console.log(`[Webhook Service] Lead ${lead._id} reset to 'pending' for retry (attempt ${lead.totalAttempts}/${maxAttempts})`);
+
+        if (isMissed) {
+          const nextAttempt = lead.totalAttempts + 1;
+          const delayMs = 2 * 60 * 60 * 1000; // 2 hours in ms
+          const jobData = {
+            leadId: lead._id.toString(),
+            clientName: lead.clientName,
+            shopName: lead.shopName || "",
+            clientNumber: lead.clientNumber,
+            clientRequirement: lead.clientRequirement,
+            clientOtherDetails: lead.clientOtherDetails,
+            attemptNum: nextAttempt,
+          };
+
+          const job = await callQueue.add("initiate-call", jobData, {
+            delay: delayMs,
+            jobId: `lead-${lead._id.toString()}-attempt-${nextAttempt}-${Date.now()}`
+          });
+          console.log(`[Webhook Service] 🔁 Re-queued missed call (attempt #${nextAttempt}) with +2h delay | jobId=${job.id}`);
+        }
       }
 
       // CRM Sync on Call Missed/Rejected
@@ -577,7 +597,7 @@ export async function handleCallStatusUpdate(type, data, req) {
           const labelIds = isMissed ? [4] : [3];
           const leadStatusId = isMissed ? 4 : 3;
           const comment = isMissed ? "Call missed (nobody picked up)" : "Call rejected by customer";
-          const nextFollowupDate = new Date(Date.now() + 1440 * 60 * 1000).toISOString().split("T")[0]; // YYYY-MM-DD
+          const nextFollowupDate = new Date(Date.now() + (isMissed ? 120 : 1440) * 60 * 1000).toISOString().split("T")[0]; // YYYY-MM-DD
 
           // Save labels and status in local database
           lead.crmLabelIds = labelIds;

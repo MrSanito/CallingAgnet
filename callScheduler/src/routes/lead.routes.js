@@ -5,6 +5,7 @@ const router = Router();
 
 router.post("/newLeadsScheduleCall", createLead); // single call at once triggered by button click in UI
 router.get("/todayFollowup", getTodayFollowup); // triggered by cronjob daily
+router.get("/todayfollowup", getTodayFollowup); // lowercase alias
 
 // Frontend Routes 
 router.get("/leads", getAllLeads);

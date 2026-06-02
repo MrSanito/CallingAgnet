@@ -12,6 +12,18 @@ services:
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────────
+  #  MONGODB — Database Storage for Call Scheduler
+  # ────────────────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: rentopus-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────
   #  CALL SCHEDULER BACKEND — Express API Server
   # ────────────────────────────────────────────────────────────────────────────
   call-scheduler:
@@ -20,11 +32,11 @@ services:
       dockerfile: Dockerfile
     container_name: rentopus-backend
     ports:
-      - "3000:3000"
+      - "6000:6000"
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      - PORT=3000
+      - PORT=6000
       # Sourced from local .env or injected environment variables
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - VIDEOSDK_AUTH_TOKEN=${VIDEOSDK_AUTH_TOKEN}
@@ -35,6 +47,7 @@ services:
       - RCRM_API_KEY=${RCRM_API_KEY}
     depends_on:
       - redis
+      - mongodb
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────────
@@ -59,6 +72,7 @@ services:
       - RCRM_API_KEY=${RCRM_API_KEY}
     depends_on:
       - redis
+      - mongodb
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────────
@@ -73,10 +87,13 @@ services:
       - "3001:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost:6000/api/v1
+      - MONGODB_URI=${MONGODB_URI}
     depends_on:
       - call-scheduler
+      - mongodb
     restart: unless-stopped
 
 volumes:
   redis_data:
+  mongodb_data:

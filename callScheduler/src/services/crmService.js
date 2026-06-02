@@ -106,15 +106,13 @@ export async function updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusI
   console.log(`[CRM Service] Updating CRM Lead ${crmLeadId} status to ${leadStatusId} and labels ${JSON.stringify(labelIds)}`);
 
   try {
-    // API CALL COMMENTED OUT BY USER REQUEST
-    /*
     const response = await fetch(url, {
       method: "POST",
       headers: {
-      //   "accept": "",
-      //   "Content-Type": "application/json",
-      //   "X-API-Key": apiKey
-      // },
+        "accept": "*/*",
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey
+      },
       body: JSON.stringify({
         LeadId: Number(crmLeadId),
         LabelIds: labelIds.map(Number),
@@ -125,10 +123,6 @@ export async function updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusI
     const text = await response.text();
     console.log(`[CRM Service] UpdateLeadStatusLabelbyId Response: Status=${response.status} | Body=${text}`);
     return { success: response.ok, status: response.status, body: text };
-    */
-
-    console.log(`[CRM Service] (MOCK SUCCESS) UpdateLeadStatusLabelbyId for Lead ${crmLeadId}`);
-    return { success: true, mocked: true };
   } catch (err) {
     console.error(`[CRM Service] ❌ Failed to update CRM lead status/labels:`, err.message);
     return { success: false, error: err.message };
@@ -153,8 +147,6 @@ export async function addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate,
 
     if (audioUrl) {
       console.log(`[CRM Service] Downloading audio from URL: ${audioUrl}`);
-      // Commented out to save local bandwidth during mock:
-      /*
       const audioResponse = await fetch(audioUrl);
       if (audioResponse.ok) {
         const audioBuffer = await audioResponse.arrayBuffer();
@@ -164,28 +156,20 @@ export async function addFollowUpWithAudio(crmLeadId, comment, nextFollowupDate,
       } else {
         console.warn(`[CRM Service] ⚠️ Failed to download audio from ${audioUrl}. Proceeding without audio file.`);
       }
-      */
-      console.log(`[CRM Service] (MOCKED) Audio recording download skipped.`);
     }
 
-    // API CALL COMMENTED OUT BY USER REQUEST
-    /*
     const response = await fetch(url, {
       method: "POST",
       headers: {
-    //     "accept": "",
-    //     "X-API-Key": apiKey
-    //   },
-    //   body: formData
-    // });
+        "accept": "*/*",
+        "X-API-Key": apiKey
+      },
+      body: formData
+    });
 
     const text = await response.text();
     console.log(`[CRM Service] AddFolloupbyLeadId Response: Status=${response.status} | Body=${text}`);
     return { success: response.ok, status: response.status, body: text };
-    */
-
-    console.log(`[CRM Service] (MOCK SUCCESS) AddFolloupbyLeadId for Lead ${crmLeadId}`);
-    return { success: true, mocked: true };
   } catch (err) {
     console.error(`[CRM Service] ❌ Failed to add CRM follow-up:`, err.message);
     return { success: false, error: err.message };
