@@ -96,15 +96,15 @@ docker compose ps
 You should see:
 * `rentopus-redis` running on port `6379` (internal container port `6379`)
 * `rentopus-mongodb` running on port `27017` (internal container port `27017`)
-* `rentopus-backend` running on port `6000` (internal container port `6000`)
+* `rentopus-backend` running on port `6002` (internal container port `6002`)
 * `rentopus-worker` running (no exposed host ports needed)
-* `rentopus-frontend` running on port `6001` (mapped to port `3000` internally)
+* `rentopus-frontend` running on port `6001` (mapped to port `6001` internally)
 
 ---
 
 ## Step 4: Configure Nginx as a Reverse Proxy
 
-Configure Nginx to route external traffic to your frontend dashboard (port `6001`) and your backend API (port `6000`).
+Configure Nginx to route external traffic to your frontend dashboard (port `6001`) and your backend API (port `6002`).
 
 Create a new Nginx configuration file:
 
@@ -139,7 +139,7 @@ server {
     server_name api.yourdomain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:6000;
+        proxy_pass http://127.0.0.1:6002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

@@ -32,11 +32,11 @@ services:
       dockerfile: Dockerfile
     container_name: rentopus-backend
     ports:
-      - "6000:6000"
+      - "6002:6002"
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      - PORT=6000
+      - PORT=6002
       # Sourced from local .env or injected environment variables
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - VIDEOSDK_AUTH_TOKEN=${VIDEOSDK_AUTH_TOKEN}
@@ -88,7 +88,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=6001
-      - NEXT_PUBLIC_API_URL=http://localhost:6000/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost:6002/api/v1
       - MONGODB_URI=${MONGODB_URI}
     depends_on:
       - call-scheduler
