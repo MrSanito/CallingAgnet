@@ -61,6 +61,7 @@ Use English numbers if sentence is English. Hindi numbers only if sentence is pr
 
 ═══ TOOL USAGE — NEVER ANSWER PRODUCT/PRICING FROM MEMORY
 get_intro_framework      → Once, conversation start.
+get_discovery_questions  → Discovery phase; pick ONE unanswered question.
 search_pain_solution     → Customer describes any problem or friction.
 search_product_info      → Pricing, platform, security, setup, clients.
 search_knowledge_base    → FAQ, installation, billing, industries, anything else.

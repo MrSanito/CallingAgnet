@@ -20,6 +20,12 @@ from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
 from videosdk.plugins.google.live_api import ThinkingConfig
 from dotenv import load_dotenv
 from tools import AgentTools
+from google.genai.types import (
+    RealtimeInputConfig,
+    AutomaticActivityDetection,
+    StartSensitivity,
+    EndSensitivity,
+)
 
 load_dotenv()
 
@@ -125,31 +131,30 @@ class MyVoiceAgent(Agent, AgentTools):
         )
 
     async def on_enter(self) -> None:
+        try:
+            await asyncio.wait_for(
+                self.play_background_audio(override_thinking=True, looping=True),
+                timeout=5.0
+            )
+        except Exception as e:
+            logger.warning(f"[on_enter] Background audio failed: {e}")
 
-       try:
-        await asyncio.wait_for(
-            self.play_background_audio(override_thinking=True, looping=True),
-            timeout=5.0
-        )
-       except Exception as e:
-        logger.warning(f"[on_enter] Background audio failed: {e}")
-
-    # Wait for SIP audio stream to stabilize after ICE completes
+        # Wait for SIP audio stream to stabilize after ICE completes
         await asyncio.sleep(1.5)
 
-         # Retry greeting up to 3 times in case session isn't ready
-       for attempt in range(3):
-         try:
-            greeting = self.lang_cfg["greeting"]
+        # Retry greeting up to 3 times in case session isn't ready
+        for attempt in range(3):
+            try:
+                greeting = self.lang_cfg["greeting"]
 
-            logger.info(f"[on_enter] Saying greeting attempt {attempt + 1}")
-            await self.session.say(greeting)
-            logger.info("[on_enter] Greeting sent ✓")
-            break
-         except Exception as e:
-            logger.error(f"[on_enter] Greeting attempt {attempt + 1} failed: {e}")
-            if attempt < 2:
-                await asyncio.sleep(1.0)
+                logger.info(f"[on_enter] Saying greeting attempt {attempt + 1}")
+                await self.session.say(greeting)
+                logger.info("[on_enter] Greeting sent ✓")
+                break
+            except Exception as e:
+                logger.error(f"[on_enter] Greeting attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    await asyncio.sleep(1.0)
 
         # if self.customer_name:
         #     greeting = f"Namaste {self.customer_name} ji! Main Rentopus ki तरफ से बोल रहा हूँ — क्या आपके पास एक दो मिनट हैं?"
@@ -185,7 +190,7 @@ class MyVoiceAgent(Agent, AgentTools):
             logger.info("=" * 50)
 
             # Call the webhook API to submit the transcript
-            webhook_url = "https://8d17-2409-40c1-400a-e745-d41c-1e1f-ec5b-871d.ngrok-free.app/api/v1/webhooks/transcript"
+            webhook_url = "http://rentopusbackend.solobuildai.com/api/v1/webhooks/transcript"
             logger.info(f"[SESSION USAGE] {self._total_usage}")
             logger.info(f"[SESSION TURNS] {len(self._per_turn_usages)} turns tracked")
             payload = {
@@ -265,9 +270,15 @@ async def start_session(context: JobContext):
             voice=GEMINI_VOICE,
             response_modalities=["AUDIO"],
             temperature=0.7,
-            
-            
-                    )
+            # realtime_input_config=RealtimeInputConfig(
+            #     automatic_activity_detection=AutomaticActivityDetection(
+            #         start_of_speech_sensitivity=StartSensitivity.START_SENSITIVITY_HIGH,
+            #         end_of_speech_sensitivity=EndSensitivity.END_SENSITIVITY_HIGH,
+            #         prefix_padding_ms=10,
+            #         silence_duration_ms=400,
+            #     )
+            # )
+        )
     )
 
     pipeline = Pipeline(llm=model)
@@ -403,7 +414,7 @@ if __name__ == "__main__":
             agent_id=AGENT_ID,
             register=True,
             initialize_timeout=60.0,
-         )
+        )
 
         job = WorkerJob(
             entrypoint=start_session,
