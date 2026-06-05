@@ -100,12 +100,9 @@ class MyVoiceAgent(Agent, AgentTools):
 
       
     async def on_enter(self) -> None:
-        try:
-            await self.session.say(AGENT_GREETING)
+        # Agent will wait for the user to speak first instead of saying the greeting
+        pass
 
-        except Exception as e:
-            logger.error(f"[on_enter] Greeting failed: {e}")
-               
 
     async def on_exit(self) -> None:
         # ✅ MUST be first — remove this agent's listener to prevent ghost 
