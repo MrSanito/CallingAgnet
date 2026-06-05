@@ -4,6 +4,8 @@
 # ║  All API keys are read from the root .env file                         ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
+name: rentopus   # ← pins project name so volumes survive folder renames
+
 services:
   # ────────────────────────────────────────────────────────────────────────
   #  REDIS — Task Queue Storage for BullMQ
@@ -15,6 +17,8 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - rentopus-network
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────
@@ -27,6 +31,9 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - rentopus-network
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────
@@ -49,6 +56,8 @@ services:
     depends_on:
       - redis
       - mongodb
+    networks:
+      - rentopus-network
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────
@@ -69,6 +78,8 @@ services:
     depends_on:
       - redis
       - mongodb
+    networks:
+      - rentopus-network
     restart: unless-stopped
 
   # ────────────────────────────────────────────────────────────────────────
@@ -91,8 +102,21 @@ services:
     depends_on:
       - call-scheduler
       - mongodb
+    networks:
+      - rentopus-network
     restart: unless-stopped
 
+# ──────────────────────────────────────────────────────────────────────────
+#  NETWORK — single private LAN for all services
+# ──────────────────────────────────────────────────────────────────────────
+networks:
+  rentopus-network:
+    driver: bridge
+
+# ──────────────────────────────────────────────────────────────────────────
+#  VOLUMES — only redis and mongodb as requested
+# ──────────────────────────────────────────────────────────────────────────
 volumes:
-  redis_data:
-  mongodb_data:
+  redis_data:       # Redis queue data — survives docker-compose down
+  mongodb_data:     # MongoDB collections — survives docker-compose down
+  mongodb_config:   # MongoDB config & indexes — survives docker-compose down

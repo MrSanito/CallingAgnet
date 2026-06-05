@@ -99,26 +99,57 @@ export { updateLead, addFollowUp, fetchTodayLeads, saveVideoSdkRoom };
  * POST /api/external/leads/UpdateLeadStatusLabelbyId
  * Updates a lead's status and labels in Rentopus CRM.
  */
-export async function updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId) {
+export async function updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId, audioUrl = null) {
   const apiKey = process.env.RCRM_API_KEY || "Q6HP0ydkWpgp2wCKa3Lnc3zAVQEPlYzbg3JRpKEqz94";
   const url = "https://rcrm-api.rentopus.in/api/external/leads/UpdateLeadStatusLabelbyId";
 
-  console.log(`[CRM Service] Updating CRM Lead ${crmLeadId} status to ${leadStatusId} and labels ${JSON.stringify(labelIds)}`);
+  console.log(`[CRM Service] Updating CRM Lead ${crmLeadId} status to ${leadStatusId} and labels ${JSON.stringify(labelIds)} | audioUrl=${audioUrl || "none"}`);
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "accept": "*/*",
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey
-      },
-      body: JSON.stringify({
-        LeadId: Number(crmLeadId),
-        LabelIds: labelIds.map(Number),
-        LeadStatusId: Number(leadStatusId)
-      })
-    });
+    let response;
+
+    if (audioUrl) {
+      // Send as FormData with audio file attached
+      const formData = new FormData();
+      formData.append("LeadId", crmLeadId.toString());
+      formData.append("LabelIds", JSON.stringify(labelIds.map(Number)));
+      formData.append("LeadStatusId", leadStatusId.toString());
+
+      console.log(`[CRM Service] Downloading audio for UpdateLeadStatusLabelbyId from: ${audioUrl}`);
+      const audioResponse = await fetch(audioUrl);
+      if (audioResponse.ok) {
+        const audioBuffer = await audioResponse.arrayBuffer();
+        const audioBlob = new Blob([audioBuffer], { type: "audio/mpeg" });
+        formData.append("AudioFile", audioBlob, "recording.mp3");
+        console.log(`[CRM Service] Audio recording downloaded and attached to UpdateLeadStatusLabelbyId.`);
+      } else {
+        console.warn(`[CRM Service] ⚠️ Failed to download audio from ${audioUrl}. Proceeding without audio file.`);
+      }
+
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "accept": "*/*",
+          "X-API-Key": apiKey
+        },
+        body: formData
+      });
+    } else {
+      // Send as JSON (no file)
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "accept": "*/*",
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey
+        },
+        body: JSON.stringify({
+          LeadId: Number(crmLeadId),
+          LabelIds: labelIds.map(Number),
+          LeadStatusId: Number(leadStatusId)
+        })
+      });
+    }
 
     const text = await response.text();
     console.log(`[CRM Service] UpdateLeadStatusLabelbyId Response: Status=${response.status} | Body=${text}`);
@@ -128,6 +159,7 @@ export async function updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusI
     return { success: false, error: err.message };
   }
 }
+
 
 /**
  * POST /api/external/leads/AddFolloupbyLeadId

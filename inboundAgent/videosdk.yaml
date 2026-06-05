@@ -1,0 +1,17 @@
+agent:
+  id: ag_dwjsve
+  name: inboundAgent
+build:
+  image: vishal0255/rentopusinagent1:1.0.1
+  logs:
+    enabled: true
+deploy:
+  id: dep_wwrk5j
+  version: v_tjd8aq
+  replicas:
+    min: 1
+    max: 4
+  profile: cpu-medium
+  region: in002
+secrets:
+  env: 5e8a5e61-9cfa-479f-86b6-9f144c4848f9

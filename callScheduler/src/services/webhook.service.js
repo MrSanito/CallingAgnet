@@ -481,7 +481,7 @@ export async function handleRecordingCompleted(data, req) {
         console.log(`[Webhook Service] Handing over completed call to CRM: crmLeadId=${crmLeadId} | labelIds=${JSON.stringify(labelIds)} | leadStatusId=${leadStatusId}`);
         
         // 1. Invoke Update Lead Label & Status
-        await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId);
+        await updateLeadStatusAndLabels(crmLeadId, labelIds, leadStatusId, finalFileUrl);
         
         // 2. Invoke Add Followup with Audio Recording
         if (finalFileUrl) {

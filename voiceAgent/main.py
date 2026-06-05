@@ -90,6 +90,7 @@ class MyVoiceAgent(Agent, AgentTools):
             if phone:
                 info_block += f"- Phone: {phone}\n"
             instructions += info_block
+            logger.info(f"instructions: {instructions}")
 
         super().__init__(
             instructions=instructions,
@@ -97,92 +98,25 @@ class MyVoiceAgent(Agent, AgentTools):
 
         self.set_thinking_audio(volume=0.9)
 
-        # Accumulate token usage across all turns
-        self._total_usage = {
-            "total_tokens": 0,
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "input_audio_tokens": 0,
-            "output_audio_tokens": 0,
-            "input_text_tokens": 0,
-            "output_text_tokens": 0,
-            "thoughts_tokens": 0,
-        }
-        self._per_turn_usages = []   # raw per-turn usage list
-        self._event_emitter = None
-        try:
-            from videosdk.agents.event_bus import global_event_emitter
-            self._event_emitter = global_event_emitter
-            global_event_emitter.on("realtime_usage", self._on_usage)
-        except Exception as e:
-            logger.warning(f"[Usage] Could not subscribe to realtime_usage event: {e}")
-
-    def _on_usage(self, usage: dict):
-        """Accumulate per-turn token usage into session total."""
-        self._per_turn_usages.append(dict(usage))   # store raw per-turn snapshot
-        for key in self._total_usage:
-            self._total_usage[key] += usage.get(key, 0)
-        logger.info(
-            f"[TURN USAGE] in={usage.get('input_tokens')} "
-            f"(audio={usage.get('input_audio_tokens')}) | "
-            f"out={usage.get('output_tokens')} "
-            f"(audio={usage.get('output_audio_tokens')}) | "
-            f"total={usage.get('total_tokens')}"
-        )
-
+      
     async def on_enter(self) -> None:
         try:
-            await asyncio.wait_for(
-                self.play_background_audio(override_thinking=True, looping=True),
-                timeout=5.0
-            )
+            await self.session.say(AGENT_GREETING)
+
         except Exception as e:
-            logger.warning(f"[on_enter] Background audio failed: {e}")
+            logger.error(f"[on_enter] Greeting failed: {e}")
+               
 
-        # Wait for SIP audio stream to stabilize after ICE completes
-        await asyncio.sleep(1.5)
-
-        # Retry greeting up to 3 times in case session isn't ready
-        for attempt in range(3):
-            try:
-                greeting = self.lang_cfg["greeting"]
-
-                logger.info(f"[on_enter] Saying greeting attempt {attempt + 1}")
-                await self.session.say(greeting)
-                logger.info("[on_enter] Greeting sent ✓")
-                break
-            except Exception as e:
-                logger.error(f"[on_enter] Greeting attempt {attempt + 1} failed: {e}")
-                if attempt < 2:
-                    await asyncio.sleep(1.0)
-
-        # if self.customer_name:
-        #     greeting = f"Namaste {self.customer_name} ji! Main Rentopus ki तरफ से बोल रहा हूँ — क्या आपके पास एक दो मिनट हैं?"
-        # else:
-    
     async def on_exit(self) -> None:
         # ✅ MUST be first — remove this agent's listener to prevent ghost 
         logger.info("====================== on_exit ========================")
-        try:
-            if self._event_emitter:
-                if hasattr(self._event_emitter, 'off'):
-                    self._event_emitter.off("realtime_usage", self._on_usage)
-                elif hasattr(self._event_emitter, 'remove_listener'):
-                    self._event_emitter.remove_listener("realtime_usage", self._on_usage)
-                logger.info("[on_exit] Unsubscribed realtime_usage listener")
-        except Exception as e:
-            logger.warning(f"[on_exit] Could not remove usage listener: {e}")        # Stop background audio (non-fatal if it fails)
+      
         try:
             await self.stop_background_audio()
         except Exception:
             pass
 
-        # Say farewell (non-fatal if it fails)
-        try:
-            await self.session.say(self.lang_cfg["farewell"])
-        except Exception:
-            pass
-
+    
         try:
             conversation = get_all_transcripts(self.session.get_context_history())
             logger.info("=" * 25 + " CONVERSATION ON_EXIT " + "=" * 25)
@@ -201,12 +135,7 @@ class MyVoiceAgent(Agent, AgentTools):
                 # Conversation
                 "transcript": conversation,
                 "contextHistory": self.session.get_context_history(),
-                # Token Usage
-                "usage": {
-                    "totals": self._total_usage,
-                    "perTurn": self._per_turn_usages,
-                    "turnCount": len(self._per_turn_usages),
-                },
+               
                 # Call Metadata
                 "agentLanguage": self.language,
                 "customerName": self.customer_name,
@@ -253,7 +182,7 @@ async def start_session(context: JobContext):
     if hasattr(context, "room") and context.room:
         room_id = context.room.name
     elif hasattr(context, "room_id"):
-        room_id = context.room_id
+        room_id = context.room_id 
     elif "roomId" in meta:
         room_id = meta["roomId"]
 
@@ -290,85 +219,7 @@ async def start_session(context: JobContext):
     await session.start(wait_for_participant=True, run_until_shutdown=True)
     logger.info("[Session Start] Agent session started — waiting for shutdown signal")
 
-    # ── Manual lifecycle: connect → wait with timeout → start ──
-    # PARTICIPANT_TIMEOUT = 45  # seconds to wait for recipient to pick up
-
-    # # Connect the agent to the room first
-    # await context.connect()
-    # logger.info(f"[Session Start] Connected to room: {room_id}")
-
-    # # Wait for the recipient to join (with timeout)
-    # try:
-    #     participant_id = await asyncio.wait_for(
-    #         context.wait_for_participant(),
-    #         timeout=PARTICIPANT_TIMEOUT
-    #     )
-    #     logger.info(f"[Session Start] Participant joined: {participant_id}")
-    # except asyncio.TimeoutError:
-    #     logger.warning(f"[Session Start] ⏰ No participant joined within {PARTICIPANT_TIMEOUT}s — marking as no_answer")
-
-    #     # Notify backend that call was not answered
-    #     import json
-    #     import urllib.request
-    #     webhook_url = "https://8d17-2409-40c1-400a-e745-d41c-1e1f-ec5b-871d.ngrok-free.app/api/v1/webhooks/transcript"
-    #     no_answer_payload = {
-    #         "serviceRoomId": room_id,
-    #         "phone": phone,
-    #         "clientNumber": phone,
-    #         "noAnswer": True,
-    #         "reason": f"no_participant_within_{PARTICIPANT_TIMEOUT}s",
-    #         "customerName": customer_name,
-    #         "agentLanguage": language,
-    #     }
-    #     try:
-    #         req = urllib.request.Request(
-    #             webhook_url,
-    #             data=json.dumps(no_answer_payload).encode('utf-8'),
-    #             headers={'Content-Type': 'application/json'},
-    #             method='POST'
-    #         )
-    #         with urllib.request.urlopen(req, timeout=30) as response:
-    #             logger.info(f"[No Answer] Webhook response: {response.read().decode('utf-8')}")
-    #     except Exception as ex:
-    #         logger.error(f"[No Answer] Failed to send no_answer webhook: {ex}")
-
-    #     # Shutdown the context cleanly
-    #     try:
-    #         await context.shutdown()
-    #     except Exception:
-    #         pass
-    #     return
-
-    # # Participant joined — start the agent session normally
-    # await session.start()
-    # logger.info("[Session Start] Agent session started — waiting for shutdown signal")
-
-    # # Keep running until session ends
-    # shutdown_event = asyncio.Event()
-
-    # def on_session_end(reason: str):
-    #     logger.info(f"[Session] Session ended: {reason}")
-    #     shutdown_event.set()
-
-    # if context.room:
-    #     context.room.setup_session_end_callback(on_session_end)
-
-    # MAX_SESSION_DURATION = 600  # 10 minute safety cap
-    # try:
-    #     await asyncio.wait_for(shutdown_event.wait(), timeout=MAX_SESSION_DURATION)
-    # except asyncio.TimeoutError:
-    #     logger.warning(f"[Session] ⏰ Session exceeded {MAX_SESSION_DURATION}s safety cap — forcing shutdown")
-    # except KeyboardInterrupt:
-    #     pass
-    # finally:
-    #     try:
-    #         await session.close()
-    #     except Exception as e:
-    #         logger.error(f"[Session] Error closing session: {e}")
-    #     try:
-    #         await context.shutdown()
-    #     except Exception as e:
-    #         logger.error(f"[Session] Error in ctx.shutdown: {e}")
+   
 
 def make_context() -> JobContext:
     room_options = RoomOptions(

@@ -152,31 +152,31 @@ class AgentTools:
     # ══════════════════════════════════════════
 
     # @function_tool
-    # async def get_discovery_questions(self, context_so_far: str = "") -> dict:
+    async def get_discovery_questions(self, context_so_far: str = "") -> dict:
 
-    #     """Call this at the START of the discovery phase to get the question bank and discovery flow.
-    #     Use it to decide which single question to ask next based on what the customer has already shared.
-    #     Never ask all questions — pick the single most relevant unanswered one.
+        """Call this at the START of the discovery phase to get the question bank and discovery flow.
+        Use it to decide which single question to ask next based on what the customer has already shared.
+        Never ask all questions — pick the single most relevant unanswered one.
 
-    #     context_so_far: Brief summary of what customer has already shared
-    #     (business type, current tools, pain mentioned).
-    #     Example: 'Clothing rental, uses WhatsApp, mentioned booking confusion'.
-    #     Leave empty if nothing is known yet.
-    #     """
-    #     logger.info(f"[AgentTools] get_discovery_questions triggered. Context: '{context_so_far}'")
+        context_so_far: Brief summary of what customer has already shared
+        (business type, current tools, pain mentioned).
+        Example: 'Clothing rental, uses WhatsApp, mentioned booking confusion'.
+        Leave empty if nothing is known yet.
+        """
+        logger.info(f"[AgentTools] get_discovery_questions triggered. Context: '{context_so_far}'")
         
-    #     start_time = time.perf_counter()
-    #     data = _search("discovery questions ask understand flow sequence", phase="discovery", top_k=2)
-    #     end_time = time.perf_counter()
+        start_time = time.perf_counter()
+        data = _search("discovery questions ask understand flow sequence", phase="discovery", top_k=2)
+        end_time = time.perf_counter()
         
-    #     logger.info(f"[AgentTools] _search took {end_time - start_time:.4f} seconds to execute in get_discovery_questions.")
+        logger.info(f"[AgentTools] _search took {end_time - start_time:.4f} seconds to execute in get_discovery_questions.")
         
-    #     return {
-    #         "data": data,
-    #         "step": "discovery",
-    #         "context_received": context_so_far or "none",
-    #         "instruction": "Pick ONE question from the bank that hasn't been answered yet. Never stack questions.",
-    #     }
+        return {
+            "data": data,
+            "step": "discovery",
+            "context_received": context_so_far or "none",
+            "instruction": "Pick ONE question from the bank that hasn't been answered yet. Never stack questions.",
+        }
 
     # ══════════════════════════════════════════
     #  STEP 3 — PAIN → SOLUTION MAPPING
