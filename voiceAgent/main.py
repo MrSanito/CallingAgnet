@@ -34,7 +34,12 @@ LANGUAGES = {
     "hinglish": {
         "greeting":      AGENT_GREETING,
         "farewell":      AGENT_FAREWELL,
-        "instructions":  SYSTEM_PROMPT,
+        # "instructions":  SYSTEM_PROMPT,
+        "instructions" : ""
+            "आप हिंदी AI सेल्स असिस्टेंट हैं। "
+            "लक्ष्य: CRM बेचना और लीड डिटेल (नाम, कंपनी, बजट, जरूरत) कलेक्ट करना। "
+            "जवाब बेहद छोटे और सीधे दें।"
+        
     }
 }
 
@@ -73,7 +78,7 @@ def get_all_transcripts(history) -> str:
 
     return conversation
 
-class MyVoiceAgent(Agent, AgentTools):
+class MyVoiceAgent(Agent):
     def __init__(self, language: str = DEFAULT_LANGUAGE, customer_name: str = "", phone: str = "", room_id: str = "unknown"):
         lang = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
         self.language = language
@@ -101,8 +106,14 @@ class MyVoiceAgent(Agent, AgentTools):
       
     async def on_enter(self) -> None:
         # Agent will wait for the user to speak first instead of saying the greeting
-        pass
-
+        try:
+                logger.info(f"[on_enter] Saying greeting attempt")
+                await self.session.say(AGENT_GREETING)
+                logger.info("[on_enter] Greeting sent")
+        except Exception as e:
+            logger.error(f"Error during on_enter: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def on_exit(self) -> None:
         # ✅ MUST be first — remove this agent's listener to prevent ghost 
