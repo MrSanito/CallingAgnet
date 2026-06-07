@@ -7,7 +7,7 @@ build:
     enabled: true
 deploy:
   id: dep_2l4l9l
-  version: v_iu6ep2
+  version: v_k70xd7
   replicas:
     min: 0
     max: 5

@@ -18,28 +18,24 @@ from pathlib import Path
 from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob, Options, MCPServerHTTP
 from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
 from videosdk.plugins.google.live_api import ThinkingConfig
+from videosdk.plugins.deepgram import DeepgramSTT
+from videosdk.plugins.google import GoogleLLM
+from videosdk.plugins.cartesia import CartesiaTTS
+from videosdk.plugins.silero import SileroVAD, pre_download_model
 from dotenv import load_dotenv
-from tools import AgentTools
-from google.genai.types import (
-    RealtimeInputConfig,
-    AutomaticActivityDetection,
-    StartSensitivity,
-    EndSensitivity,
-)
+
 
 load_dotenv()
+
+# Pre-downloading the Turn Detector model
+pre_download_model()
 
 
 LANGUAGES = {
     "hinglish": {
         "greeting":      AGENT_GREETING,
         "farewell":      AGENT_FAREWELL,
-        # "instructions":  SYSTEM_PROMPT,
-        "instructions" : ""
-            "आप हिंदी AI सेल्स असिस्टेंट हैं। "
-            "लक्ष्य: CRM बेचना और लीड डिटेल (नाम, कंपनी, बजट, जरूरत) कलेक्ट करना। "
-            "जवाब बेहद छोटे और सीधे दें।"
-        
+        "instructions":  SYSTEM_PROMPT,
     }
 }
 
@@ -47,8 +43,8 @@ LANGUAGES = {
 DEFAULT_LANGUAGE = "hinglish"
 
 AGENT_ID        = os.getenv("AGENT_ID")
-GEMINI_MODEL = "gemini-3.1-flash-live-preview"
-GEMINI_VOICE    = "Puck"          # casual, youthful — fits Hinglish/delivery context
+# GEMINI_MODEL = "gemini-3.1-flash-live-preview"
+# GEMINI_VOICE    = "Puck"          # casual, youthful — fits Hinglish/delivery context
 MAX_PROCESSES   = 10
 REPORTS_DIR     = Path("feedback_reports")
 REPORTS_DIR.mkdir(exist_ok=True)
@@ -101,7 +97,7 @@ class MyVoiceAgent(Agent):
             instructions=instructions,
         )
 
-        self.set_thinking_audio(volume=0.9)
+        # self.set_thinking_audio(volume=0.9)
 
       
     async def on_enter(self) -> None:
@@ -133,8 +129,6 @@ class MyVoiceAgent(Agent):
 
             # Call the webhook API to submit the transcript
             webhook_url = "http://rentopusbackend.solobuildai.com/api/v1/webhooks/transcript"
-            logger.info(f"[SESSION USAGE] {self._total_usage}")
-            logger.info(f"[SESSION TURNS] {len(self._per_turn_usages)} turns tracked")
             payload = {
                 # Identifiers
                 "serviceRoomId": self.room_id,
@@ -200,25 +194,35 @@ async def start_session(context: JobContext):
         phone=phone,
         room_id=room_id
     )
-    model = GeminiRealtime(
-        model=GEMINI_MODEL,
-        api_key=os.getenv("GOOGLE_API_KEY"),
-        config=GeminiLiveConfig(
-            voice=GEMINI_VOICE,
-            response_modalities=["AUDIO"],
-            temperature=0.7,
-            # realtime_input_config=RealtimeInputConfig(
-            #     automatic_activity_detection=AutomaticActivityDetection(
-            #         start_of_speech_sensitivity=StartSensitivity.START_SENSITIVITY_HIGH,
-            #         end_of_speech_sensitivity=EndSensitivity.END_SENSITIVITY_HIGH,
-            #         prefix_padding_ms=10,
-            #         silence_duration_ms=400,
-            #     )
-            # )
-        )
-    )
+    # model = GeminiRealtime(
+    #     model=GEMINI_MODEL,
+    #     api_key=os.getenv("GOOGLE_API_KEY"),
+    #     config=GeminiLiveConfig(
+    #         voice=GEMINI_VOICE,
+    #         response_modalities=["AUDIO"],
+    #         temperature=0.7,
+    #         # realtime_input_config=RealtimeInputConfig(
+    #         #     automatic_activity_detection=AutomaticActivityDetection(
+    #         #         start_of_speech_sensitivity=StartSensitivity.START_SENSITIVITY_HIGH,
+    #         #         end_of_speech_sensitivity=EndSensitivity.END_SENSITIVITY_HIGH,
+    #         #         prefix_padding_ms=10,
+    #         #         silence_duration_ms=400,
+    #         #     )
+    #         # )
+    #     )
+    # )
 
-    pipeline = Pipeline(llm=model)
+    pipeline = Pipeline(
+        stt=DeepgramSTT(api_key=os.getenv("DEEPGRAM_API_KEY")),
+        llm=GoogleLLM(),
+        tts=CartesiaTTS(
+                api_key=os.getenv("CARTESIA_API_KEY"),  
+                model="sonic-2",
+                voice_id="56e35e2d-6eb6-4226-ab8b-9776515a7094",
+                language="hi",   # ← paste the voice ID here
+),
+        vad=SileroVAD()
+    )
     session = AgentSession(
         agent=agent,
         pipeline=pipeline
