@@ -1,35 +1,19 @@
-from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob,function_tool
-from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
+from multiprocessing import sharedctypes
 import logging
-from instructions import AGENT_FAREWELL, SYSTEM_PROMPT, AGENT_GREETING
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler()])
 from pathlib import Path
-import logging
-
 import asyncio
 import traceback
-import logging
 import os
-import sys
-import csv
-import uuid
-from datetime import datetime
 from pathlib import Path
-from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob, Options, MCPServerHTTP
-from videosdk.plugins.google import GeminiRealtime, GeminiLiveConfig
-from videosdk.plugins.google.live_api import ThinkingConfig
-from videosdk.plugins.deepgram import DeepgramSTT
-from videosdk.plugins.google import GoogleLLM
-from videosdk.plugins.cartesia import CartesiaTTS
-from videosdk.plugins.silero import SileroVAD, pre_download_model
+from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob,Options,function_tool,EOUConfig
+from videosdk.agents.plugins import DeepgramSTT, GoogleLLM, CartesiaTTS, SileroVAD
+from videosdk.agents.inference import NamoTurnDetectorV1
+
+from instructions import AGENT_FAREWELL, SYSTEM_PROMPT, AGENT_GREETING
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler()])
 from dotenv import load_dotenv
 
-
-load_dotenv()
-
-# Pre-downloading the Turn Detector model
-pre_download_model()
-
+load_dotenv(override=True)
 
 LANGUAGES = {
     "hinglish": {
@@ -43,9 +27,7 @@ LANGUAGES = {
 DEFAULT_LANGUAGE = "hinglish"
 
 AGENT_ID        = os.getenv("AGENT_ID")
-# GEMINI_MODEL = "gemini-3.1-flash-live-preview"
-# GEMINI_VOICE    = "Puck"          # casual, youthful — fits Hinglish/delivery context
-MAX_PROCESSES   = 10
+MAX_PROCESSES   = 3
 REPORTS_DIR     = Path("feedback_reports")
 REPORTS_DIR.mkdir(exist_ok=True)
 
@@ -106,15 +88,17 @@ class MyVoiceAgent(Agent):
                 logger.info(f"[on_enter] Saying greeting attempt")
                 await self.session.say(AGENT_GREETING)
                 logger.info("[on_enter] Greeting sent")
+                                
+                await self.play_background_audio(
+                        volume=0.10,
+                        looping=True,
+                    )
         except Exception as e:
             logger.error(f"Error during on_enter: {e}")
             import traceback
             traceback.print_exc()
 
-    async def on_exit(self) -> None:
-        # ✅ MUST be first — remove this agent's listener to prevent ghost 
-        logger.info("====================== on_exit ========================")
-      
+    async def on_exit(self) -> None:      
         try:
             await self.stop_background_audio()
         except Exception:
@@ -194,34 +178,18 @@ async def start_session(context: JobContext):
         phone=phone,
         room_id=room_id
     )
-    # model = GeminiRealtime(
-    #     model=GEMINI_MODEL,
-    #     api_key=os.getenv("GOOGLE_API_KEY"),
-    #     config=GeminiLiveConfig(
-    #         voice=GEMINI_VOICE,
-    #         response_modalities=["AUDIO"],
-    #         temperature=0.7,
-    #         # realtime_input_config=RealtimeInputConfig(
-    #         #     automatic_activity_detection=AutomaticActivityDetection(
-    #         #         start_of_speech_sensitivity=StartSensitivity.START_SENSITIVITY_HIGH,
-    #         #         end_of_speech_sensitivity=EndSensitivity.END_SENSITIVITY_HIGH,
-    #         #         prefix_padding_ms=10,
-    #         #         silence_duration_ms=400,
-    #         #     )
-    #         # )
-    #     )
-    # )
+
 
     pipeline = Pipeline(
-        stt=DeepgramSTT(api_key=os.getenv("DEEPGRAM_API_KEY")),
-        llm=GoogleLLM(),
-        tts=CartesiaTTS(
-                api_key=os.getenv("CARTESIA_API_KEY"),  
-                model="sonic-2",
-                voice_id="56e35e2d-6eb6-4226-ab8b-9776515a7094",
-                language="hi",   # ← paste the voice ID here
-),
-        vad=SileroVAD()
+        stt=DeepgramSTT(language="hi"),
+        llm=GoogleLLM(model="gemini-2.5-flash"),
+        tts=CartesiaTTS(model="sonic-3.5",language="hi"),
+        turn_detector=NamoTurnDetectorV1(language="hi"),
+        vad=SileroVAD(),
+        eou_config=EOUConfig(
+            mode="DEFAULT",
+            min_max_speech_wait_timeout=[0.3, 0.5],
+        ),
     )
     session = AgentSession(
         agent=agent,
@@ -231,12 +199,11 @@ async def start_session(context: JobContext):
     await session.start(wait_for_participant=True, run_until_shutdown=True)
     logger.info("[Session Start] Agent session started — waiting for shutdown signal")
 
-   
 
 def make_context() -> JobContext:
     room_options = RoomOptions(
         # room_id="<room_id>", # Replace it with your actual room_id
-        name="Gemini Realtime Agent",
+        name="Voice Agent",
         playground=True,
         recording=True,
         background_audio=True,
@@ -268,8 +235,7 @@ def validate_env() -> None:
 if __name__ == "__main__":
     try:
         validate_env()
-
-        logger.info(f"Starting Rentopus Sales Agent | id={AGENT_ID} | model={GEMINI_MODEL}")
+        logger.info(f"Starting Rentopus Sales Agent | id={AGENT_ID} |")
         logger.info(f"Default language : {DEFAULT_LANGUAGE.upper()}")
         logger.info(f"Reports directory: {REPORTS_DIR.resolve()}")
 

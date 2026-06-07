@@ -1,4 +1,8 @@
-videosdk-agents @ git+https://github.com/videosdk-live/agents.git@fix/call-transfer-drop-token-arg#subdirectory=videosdk-agents
-videosdk-plugins-google @ git+https://github.com/videosdk-live/agents.git@fix/call-transfer-drop-token-arg#subdirectory=videosdk-plugins/videosdk-plugins-google
+videosdk-agents
+videosdk-plugins-deepgram
+videosdk-plugins-cartesia
+videosdk-plugins-silero
+videosdk-plugins-google 
+
 python-dotenv
-google-genai==2.6.0
+google-genai 

@@ -8,8 +8,8 @@
 
 
 
-# AGENT_GREETING = "Hi, मैं Yash Rentopus से बोल रहा हूँ"
-AGENT_GREETING = "Hello"
+AGENT_GREETING = "Hi, मैं Yash Rentopus से बोल रहा हूँ"
+# AGENT_GREETING = "Hello"
 
 AGENT_FAREWELL = "बहुत अच्छी बात हुई आपके साथ — time देने के लिए शुक्रिया। Take care, bye-bye!"
 
