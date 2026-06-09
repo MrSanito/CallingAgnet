@@ -2,14 +2,14 @@ agent:
   id: ag_pu4csw
   name: voiceAgent
 build:
-  image: vishal0255/rentopusagentfinal:1.9.3
+  image: vishal0255/rentopusagentfinal:2.1.2
   logs:
     enabled: true
 deploy:
   id: dep_2l4l9l
-  version: v_n82ljv
+  version: v_5sq6iz
   replicas:
-    min: 0
+    min: 1
     max: 5
   profile: cpu-medium
   region: in002

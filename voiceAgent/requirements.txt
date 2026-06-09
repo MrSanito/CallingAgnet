@@ -5,4 +5,4 @@ videosdk-plugins-silero
 videosdk-plugins-google 
 
 python-dotenv
-google-genai 
+ 

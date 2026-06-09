@@ -1,4 +1,5 @@
 from multiprocessing import sharedctypes
+import sys
 import logging
 from pathlib import Path
 import asyncio
@@ -8,7 +9,7 @@ from pathlib import Path
 from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob,Options,function_tool,EOUConfig
 from videosdk.agents.plugins import DeepgramSTT, GoogleLLM, CartesiaTTS, SileroVAD
 from videosdk.agents.inference import NamoTurnDetectorV1
-
+ 
 from instructions import AGENT_FAREWELL, SYSTEM_PROMPT, AGENT_GREETING
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler()])
 from dotenv import load_dotenv
@@ -183,9 +184,11 @@ async def start_session(context: JobContext):
     pipeline = Pipeline(
         stt=DeepgramSTT(language="hi"),
         llm=GoogleLLM(model="gemini-2.5-flash"),
-        tts=CartesiaTTS(model="sonic-3.5",language="hi"),
+        tts=CartesiaTTS(model="sonic-3.5",language="hi",voice_id="4877b818-c7fe-4c89-b1cf-eadf8e23da72" ),
         turn_detector=NamoTurnDetectorV1(language="hi"),
-        vad=SileroVAD(),
+        vad=SileroVAD(
+            min_silence_duration=800,
+        ),
         eou_config=EOUConfig(
             mode="DEFAULT",
             min_max_speech_wait_timeout=[0.3, 0.5],
