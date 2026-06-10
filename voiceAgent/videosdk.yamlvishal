@@ -1,0 +1,12 @@
+agent:
+  id: ag_edummw
+  name: my-agent
+build:
+  image: vishal0255/rentopusagentfinal:2.1.8
+  logs:
+    enabled: true
+deploy:
+  id: dep_74ro69
+  version: v_bnaqro
+secrets:
+  env: d70e2f49-e1c9-4e8f-b259-9c37b2b05a8d

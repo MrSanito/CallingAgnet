@@ -1,8 +1,10 @@
-videosdk-agents
-videosdk-plugins-deepgram
-videosdk-plugins-cartesia
-videosdk-plugins-silero
-videosdk-plugins-google 
-
 python-dotenv
- 
+
+videosdk-agents @ git+https://github.com/videosdk-live/agents.git@feat/audio-codec-input#subdirectory=videosdk-agents
+videosdk-plugins-deepgram @ git+https://github.com/videosdk-live/agents.git@feat/audio-codec-input#subdirectory=videosdk-plugins/videosdk-plugins-deepgram
+videosdk-plugins-google @ git+https://github.com/videosdk-live/agents.git@feat/audio-codec-input#subdirectory=videosdk-plugins/videosdk-plugins-google
+videosdk-plugins-cartesia @ git+https://github.com/videosdk-live/agents.git@feat/audio-codec-input#subdirectory=videosdk-plugins/videosdk-plugins-cartesia
+videosdk-plugins-silero @ git+https://github.com/videosdk-live/agents.git@feat/audio-codec-input#subdirectory=videosdk-plugins/videosdk-plugins-silero
+
+
+

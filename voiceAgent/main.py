@@ -6,9 +6,9 @@ import asyncio
 import traceback
 import os
 from pathlib import Path
-from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob,Options,function_tool,EOUConfig
+from videosdk.agents import Agent, AgentSession, Pipeline, JobContext, RoomOptions, WorkerJob,Options,function_tool,EOUConfig, ExecutorType
 from videosdk.agents.plugins import DeepgramSTT, GoogleLLM, CartesiaTTS, SileroVAD
-from videosdk.agents.inference import NamoTurnDetectorV1
+from videosdk.agents.inference import Turn
  
 from instructions import AGENT_FAREWELL, SYSTEM_PROMPT, AGENT_GREETING
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler()])
@@ -184,11 +184,9 @@ async def start_session(context: JobContext):
     pipeline = Pipeline(
         stt=DeepgramSTT(language="hi"),
         llm=GoogleLLM(model="gemini-2.5-flash"),
-        tts=CartesiaTTS(model="sonic-3.5",language="hi",voice_id="4877b818-c7fe-4c89-b1cf-eadf8e23da72" ),
-        turn_detector=NamoTurnDetectorV1(language="hi"),
-        vad=SileroVAD(
-            min_silence_duration=800,
-        ),
+        tts=CartesiaTTS(sample_rate=8000,model="sonic-3.5",language="hi", voice_id="4877b818-c7fe-4c89-b1cf-eadf8e23da72"),
+        turn_detector=Turn.namo(language="hi", base_url="https://us002.inference-gateway.videosdk.live"),
+        vad=SileroVAD(),
         eou_config=EOUConfig(
             mode="DEFAULT",
             min_max_speech_wait_timeout=[0.3, 0.5],
@@ -208,8 +206,8 @@ def make_context() -> JobContext:
         # room_id="<room_id>", # Replace it with your actual room_id
         name="Voice Agent",
         playground=True,
-        recording=True,
-        background_audio=True,
+        # recording=True,
+        # background_audio=True,
     )
 
 
@@ -245,7 +243,7 @@ if __name__ == "__main__":
         options = Options(
             agent_id=AGENT_ID,
             register=True,
-            initialize_timeout=60.0,
+            executor_type=ExecutorType.THREAD
         )
 
         job = WorkerJob(
