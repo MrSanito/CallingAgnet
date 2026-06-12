@@ -1,0 +1,36 @@
+# Version Control
+.git
+.gitignore
+
+# Environment Variables
+.env
+.env.*
+
+# Python Cache and Build Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.ipynb_checkpoints/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+pip-log.txt
+
+# Editor / IDE Configs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
+
+# Docker (Prevent recursive copies of metadata/config if any)
+Dockerfile
+.dockerignore

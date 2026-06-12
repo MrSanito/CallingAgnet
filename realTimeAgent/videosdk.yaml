@@ -1,0 +1,17 @@
+agent:
+  id: ag_gnxatg
+  name: realtime
+build:
+  image: vishal0255/realtimeagent:0.0.6
+  logs:
+    enabled: true
+deploy:
+  id: dep_0b9gxh
+  version: v_am1491
+  replicas:
+    min: 1
+    max: 5
+  profile: cpu-small
+  region: in002
+secrets:
+  env: 0a903bf3-1bc5-416f-8ada-e89104926da5

@@ -7,7 +7,7 @@ build:
     enabled: true
 deploy:
   id: dep_2l4l9l
-  version: v_stfac8
+  version: v_6pxvea
   replicas:
     min: 1
     max: 5
